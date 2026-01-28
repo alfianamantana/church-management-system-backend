@@ -1,9 +1,11 @@
-import express, { Express, Request, Response } from "express"
+import 'dotenv/config'
+import express, { Express } from "express"
+import { router } from "./src/routes/index.route"
 import cors from "cors"
 
 // initial
 const app: Express = express()
-const PORT: number = 8000
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000
 
 // setup
 app.use(cors())
@@ -11,9 +13,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
 // route
-app.get("/", (req: Request, res: Response): Response => {
-    return res.send("Hello world")
-})
+router(app)
 
 // running
 function main(): void {
