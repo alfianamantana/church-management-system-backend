@@ -1,10 +1,64 @@
-
-
-import { Request, Response } from "express";
+import { Request, Response } from 'express';
 import Validator from 'validatorjs';
 import { User, Auth } from '../model';
-import bcrypt from "bcrypt";
-import { generateToken } from "../helpers";
+import bcrypt from 'bcrypt';
+import { generateToken } from '../helpers';
+
+exports.createUser = async (req: Request, res: Response) => {
+  try {
+    const { name, email, password, phoneNumber, subscribeUntil, role } =
+      req.body;
+
+    const rules = {
+      name: 'required|string',
+      email: 'required|email',
+      password: 'required|string',
+      phoneNumber: 'required|string',
+      subscribeUntil: 'date',
+      role: 'string|in:admin,user',
+    };
+    const validation = new Validator(
+      { name, email, password, phoneNumber, subscribeUntil, role },
+      rules,
+    );
+    if (validation.fails()) {
+      return res.json({
+        code: 400,
+        status: 'error',
+        message: validation.errors.all(),
+      });
+    }
+
+    const existing = await User.findOne({ where: { email } });
+    if (existing) {
+      return res.json({
+        code: 400,
+        status: 'error',
+        message: ['Email already exists'],
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      phoneNumber,
+      subscribeUntil: subscribeUntil || null,
+      role: role || undefined,
+    });
+
+    const { password: _, ...userData } = user.get({ plain: true });
+    return res.json({ code: 201, status: 'success', data: userData });
+  } catch (err) {
+    return res.json({
+      code: 500,
+      status: 'error',
+      message: ['Server error'],
+    });
+  }
+};
 
 exports.login = async (req: Request, res: Response) => {
   try {
@@ -12,21 +66,37 @@ exports.login = async (req: Request, res: Response) => {
 
     const rules = { email: 'required|email', password: 'required|string' };
     const validation = new Validator({ email, password }, rules);
-    if (validation.fails()) return res.json({ code: 400, status: "error", message: validation.errors.all() });
+    if (validation.fails())
+      return res.json({
+        code: 400,
+        status: 'error',
+        message: validation.errors.all(),
+      });
 
     const userInstance = await User.findOne({ where: { email } });
 
-    if (!userInstance) return res.json({ code: 400, status: "error", message: "Invalid credentials" });
+    if (!userInstance)
+      return res.json({
+        code: 400,
+        status: 'error',
+        message: ['Invalid credentials'],
+      });
 
     const match = await bcrypt.compare(password, userInstance.password);
 
-    if (!match) return res.json({ code: 400, status: 'error', message: 'Invalid credentials' });
+    if (!match)
+      return res.json({
+        code: 400,
+        status: 'error',
+        message: ['Invalid credentials'],
+      });
 
     const token = generateToken(25);
     const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Upsert user token: if an Auth exists for this user, update it; otherwise create.
-    const existingInstance = await Auth.findOne({ where: { userId: userInstance.id } });
+    const existingInstance = await Auth.findOne({
+      where: { userId: userInstance.id },
+    });
     if (existingInstance) {
       await existingInstance.update({ token, validUntil });
     } else {
@@ -35,8 +105,14 @@ exports.login = async (req: Request, res: Response) => {
 
     const { password: _, ...userData } = userInstance.get({ plain: true });
 
-    return res.json({ code: 200, status: "success", message: "Login successful", token: token, data: userData });
+    return res.json({
+      code: 200,
+      status: 'success',
+      message: ['Login successful'],
+      token: token,
+      data: userData,
+    });
   } catch (err) {
-    return res.json({ code: 500, status: "error", message: 'Server error' });
+    return res.json({ code: 500, status: 'error', message: ['Server error'] });
   }
 };
