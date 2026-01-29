@@ -21,9 +21,9 @@ export class Jemaat extends Model {
     allowNull: true,
     field: 'mom_id',
   })
-  momId?: number;
+  mom_id?: number;
 
-  @BelongsTo(() => Jemaat, 'momId')
+  @BelongsTo(() => Jemaat, 'mom_id')
   mom?: Jemaat;
 
   @ForeignKey(() => Jemaat)
@@ -32,7 +32,7 @@ export class Jemaat extends Model {
     allowNull: true,
     field: 'dad_id',
   })
-  dadId?: number;
+  dad_id?: number;
 
   @BelongsTo(() => Jemaat, 'dadId')
   dad?: Jemaat;
@@ -48,33 +48,38 @@ export class Jemaat extends Model {
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
+    field: 'name',
   })
   name!: string;
 
   @Column({
     type: DataType.DATE,
     allowNull: false,
+    field: 'birth_date',
   })
-  birthdate!: Date;
+  birth_date!: Date;
 
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
+    field: 'born_place',
   })
-  bornplace!: string;
+  born_place!: string;
 
   @Column({
     type: DataType.DATE,
     allowNull: true,
+    field: 'baptism_date',
   })
-  baptismdate?: Date;
+  baptism_date?: Date;
 
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
     defaultValue: false,
+    field: 'is_married',
   })
-  ismarried!: boolean;
+  is_married!: boolean;
 }
 
 @Table({
@@ -97,6 +102,7 @@ export class User extends Model {
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
+    field: 'name',
   })
   name!: string;
 
@@ -104,6 +110,7 @@ export class User extends Model {
     type: DataType.STRING(255),
     allowNull: false,
     unique: true,
+    field: 'email',
   })
   email!: string;
 
@@ -118,14 +125,14 @@ export class User extends Model {
     allowNull: false,
     field: 'phone_number',
   })
-  phoneNumber!: string;
+  phone_number!: string;
 
   @Column({
     type: DataType.DATE,
     allowNull: true,
     field: 'subscribe_until',
   })
-  subscribeUntil?: Date;
+  subscribe_until?: Date;
 
   @Column({
     type: DataType.STRING(50),
@@ -133,6 +140,14 @@ export class User extends Model {
     defaultValue: 'user',
   })
   role!: string;
+
+  @Column({
+    type: DataType.ENUM('basic', 'full'),
+    allowNull: false,
+    defaultValue: 'basic',
+    field: 'subscribe_type',
+  })
+  subscribe_type!: 'basic' | 'full';
 }
 
 @Table({
@@ -158,7 +173,7 @@ export class Auth extends Model {
     allowNull: false,
     field: 'user_id',
   })
-  userId!: number;
+  user_id!: number;
 
   @BelongsTo(() => User)
   user!: User;
@@ -174,5 +189,5 @@ export class Auth extends Model {
     allowNull: false,
     field: 'valid_until',
   })
-  validUntil!: Date;
+  valid_until!: Date;
 }

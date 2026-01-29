@@ -1,26 +1,18 @@
-import { Request, Response } from "express"
+import { Request, Response } from 'express';
 
 export const IndexController = {
-
-    index(req: Request, res: Response): Response {
-
-        return res.send({
-            status: true,
-            code: 200,
-            message: "Hello world"
-        })
-    },
-
-    fallback(req: Request, res: Response): Response {
-        return res.status(404).send({
-            status: false,
-            code: 404,
-            message: "route not found",
-            error: {
-                path: req.path,
-                method: req.method,
-                baseURL: req.baseUrl
-            }
-        })
-    }
-}
+  index(req: Request, res: Response): Response {
+    return res.send({
+      code: 200,
+      status: 'success',
+      message: ['API is running'],
+    });
+  },
+  fallback(req: Request, res: Response): Response {
+    return res.send({
+      status: 'error',
+      code: 404,
+      message: ['route not found'],
+    });
+  },
+};

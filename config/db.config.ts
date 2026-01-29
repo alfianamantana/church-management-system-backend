@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize-typescript';
-import { User, Auth } from '../src/model';
+import { User, Auth, Jemaat } from '../src/model';
 
 const sequelize = new Sequelize({
   database: process.env.DB_NAME!,
@@ -10,10 +10,13 @@ const sequelize = new Sequelize({
   dialect: 'postgres',
   dialectOptions: {
     connectTimeout: 30000,
-    ssl: process.env.SSL === "false" ? false : {
-      require: true,
-      rejectUnauthorized: false
-    }
+    ssl:
+      process.env.SSL === 'false'
+        ? false
+        : {
+            require: true,
+            rejectUnauthorized: false,
+          },
   },
   pool: {
     max: 100,
@@ -22,11 +25,11 @@ const sequelize = new Sequelize({
     idle: 10000,
   },
   define: {
-    charset: "utf8mb4",
-    collate: "utf8mb4_0900_ai_ci",
+    charset: 'utf8mb4',
+    collate: 'utf8mb4_0900_ai_ci',
   },
   logging: false,
-  models: [User, Auth],
+  models: [User, Auth, Jemaat],
 });
 
 sequelize.sync();
