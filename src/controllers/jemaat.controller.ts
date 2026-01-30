@@ -11,8 +11,21 @@ export const JemaatController = {
       page = Number(page) || 1;
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
+      const birth_date_start = req.query.birth_date_start
+        ? new Date(String(req.query.birth_date_start))
+        : null;
+      const birth_date_end = req.query.birth_date_end
+        ? new Date(String(req.query.birth_date_end))
+        : null;
 
       let whereClause = {};
+
+      if (birth_date_start && birth_date_end) {
+        whereClause = {
+          ...whereClause,
+          birth_date: { [Op.between]: [birth_date_start, birth_date_end] },
+        };
+      }
 
       if (q) {
         whereClause = {

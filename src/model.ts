@@ -5,6 +5,7 @@ import {
   DataType,
   ForeignKey,
   BelongsTo,
+  HasMany,
 } from 'sequelize-typescript';
 
 @Table({
@@ -155,6 +156,9 @@ export class User extends Model {
     field: 'subscribe_type',
   })
   subscribe_type!: 'basic' | 'full';
+
+  @HasMany(() => Event)
+  events?: Event[];
 }
 
 @Table({
@@ -197,4 +201,61 @@ export class Auth extends Model {
     field: 'valid_until',
   })
   valid_until!: Date;
+}
+
+@Table({
+  tableName: 'events',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Event extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'title',
+  })
+  title!: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'start',
+  })
+  start!: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'end',
+  })
+  end!: Date;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    field: 'description',
+  })
+  description?: string;
 }

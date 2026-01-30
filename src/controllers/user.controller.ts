@@ -169,8 +169,6 @@ export const UserController = {
         data: userData,
       });
     } catch (err) {
-      console.log(err, '?');
-
       return res.json({
         code: 500,
         status: 'error',
