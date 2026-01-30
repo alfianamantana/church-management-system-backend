@@ -47,7 +47,6 @@ export const UserController = {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       user.password = hashedPassword;
       await user.save();
-
       return res.json({
         code: 200,
         status: 'success',
@@ -57,7 +56,7 @@ export const UserController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: ['Internal server error'],
       });
     }
   },
@@ -149,15 +148,15 @@ export const UserController = {
         });
 
       const token = generateToken(25);
-      const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      const valid_until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
       const existingInstance = await Auth.findOne({
-        where: { userId: userInstance.id },
+        where: { user_id: userInstance.id },
       });
       if (existingInstance) {
-        await existingInstance.update({ token, validUntil });
+        await existingInstance.update({ token, valid_until });
       } else {
-        await Auth.create({ userId: userInstance.id, token, validUntil });
+        await Auth.create({ user_id: userInstance.id, token, valid_until });
       }
 
       const { password: _, ...userData } = userInstance.get({ plain: true });
@@ -170,10 +169,12 @@ export const UserController = {
         data: userData,
       });
     } catch (err) {
+      console.log(err, '?');
+
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: ['Internal server error'],
       });
     }
   },

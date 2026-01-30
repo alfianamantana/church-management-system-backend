@@ -1,8 +1,8 @@
-import { Express } from 'express';
+import { Router } from 'express';
 import { JemaatController } from '../controllers/jemaat.controller';
 
-export const JemaatRoutes = (app: Express): void => {
-  app.put('/', JemaatController.updateJemaat);
-  app.post('/', JemaatController.createJemaat);
-  app.get('/', JemaatController.getAll);
+export const JemaatRoutes = (router: Router): void => {
+  router.put('/', JemaatController.updateJemaat);
+  router.post('/', JemaatController.createJemaat);
+  router.get('/', JemaatController.getAll);
 };

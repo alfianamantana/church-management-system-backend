@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/index.js\"",
     "build": "npx tsc",
-    "serve": "node ./dist/index.js"
+    "serve": "node ./dist/index.js",
+    "seed": "ts-node ./src/seeder.ts"
   },
   "repository": {
     "type": "git",

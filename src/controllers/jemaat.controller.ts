@@ -39,15 +39,13 @@ export const JemaatController = {
         pagination: {
           total: count,
           page,
-          limit,
-          totalPages: Math.ceil(count / limit),
         },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: ['Internal server error'],
         error: err,
       });
     }
@@ -109,7 +107,7 @@ export const JemaatController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: ['Internal server error'],
         error: err,
       });
     }
@@ -124,6 +122,7 @@ export const JemaatController = {
         is_married,
         mom_id,
         dad_id,
+        phone_number,
       } = req.body;
 
       const rules = {
@@ -148,6 +147,7 @@ export const JemaatController = {
         is_married,
         mom_id: mom_id || null,
         dad_id: dad_id || null,
+        phone_number: phone_number || null,
       });
 
       return res.json({
@@ -159,7 +159,7 @@ export const JemaatController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: ['Internal server error'],
         error: err,
       });
     }

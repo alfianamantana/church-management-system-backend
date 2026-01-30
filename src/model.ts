@@ -67,6 +67,13 @@ export class Jemaat extends Model {
   born_place!: string;
 
   @Column({
+    type: DataType.STRING(30),
+    allowNull: true,
+    field: 'phone_number',
+  })
+  phone_number!: string;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: 'baptism_date',
@@ -135,11 +142,11 @@ export class User extends Model {
   subscribe_until?: Date;
 
   @Column({
-    type: DataType.STRING(50),
+    type: DataType.ENUM('superadmin', 'user'),
     allowNull: false,
     defaultValue: 'user',
   })
-  role!: string;
+  role!: 'superadmin' | 'user';
 
   @Column({
     type: DataType.ENUM('basic', 'full'),
