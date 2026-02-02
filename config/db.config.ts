@@ -1,5 +1,14 @@
 import { Sequelize } from 'sequelize-typescript';
-import { User, Auth, Jemaat, Event } from '../src/model';
+import {
+  User,
+  Auth,
+  Jemaat,
+  Event,
+  Member,
+  Role,
+  Schedule,
+  ServiceAssignment,
+} from '../src/model';
 
 const sequelize = new Sequelize({
   database: process.env.DB_NAME!,
@@ -29,7 +38,16 @@ const sequelize = new Sequelize({
     collate: 'utf8mb4_0900_ai_ci',
   },
   logging: false,
-  models: [User, Auth, Jemaat, Event],
+  models: [
+    User,
+    Auth,
+    Jemaat,
+    Event,
+    Member,
+    Role,
+    Schedule,
+    ServiceAssignment,
+  ],
 });
 
 sequelize.sync();

@@ -7,6 +7,7 @@ import cors from 'cors';
 import { JemaatRoutes } from './src/routes/jemaat.route';
 import { UserRoutes } from './src/routes/user.route';
 import { EventRoutes } from './src/routes/event.route';
+import { MusicRoutes } from './src/routes/music.route';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
@@ -26,6 +27,10 @@ app.use('/user', userRouter);
 const eventRouter = express.Router();
 EventRoutes(eventRouter);
 app.use('/events', eventRouter);
+
+const musicRouter = express.Router();
+MusicRoutes(musicRouter);
+app.use('/music', musicRouter);
 
 async function main(): Promise<void> {
   try {

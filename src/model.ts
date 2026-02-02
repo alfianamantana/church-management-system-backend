@@ -259,3 +259,152 @@ export class Event extends Model {
   })
   description?: string;
 }
+
+@Table({
+  tableName: 'members',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Member extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.STRING(30),
+    allowNull: true,
+    field: 'phone',
+  })
+  phone?: string;
+
+  @HasMany(() => ServiceAssignment)
+  serviceAssignments?: ServiceAssignment[];
+}
+
+@Table({
+  tableName: 'roles',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Role extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'role_name',
+  })
+  role_name!: string;
+
+  @HasMany(() => ServiceAssignment)
+  serviceAssignments?: ServiceAssignment[];
+}
+
+@Table({
+  tableName: 'schedules',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Schedule extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'service_name',
+  })
+  service_name!: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'scheduled_at',
+  })
+  scheduled_at!: Date;
+
+  @HasMany(() => ServiceAssignment)
+  serviceAssignments?: ServiceAssignment[];
+}
+
+@Table({
+  tableName: 'service_assignments',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class ServiceAssignment extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @ForeignKey(() => Schedule)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'schedule_id',
+  })
+  schedule_id!: number;
+
+  @BelongsTo(() => Schedule)
+  schedule!: Schedule;
+
+  @ForeignKey(() => Member)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'member_id',
+  })
+  member_id!: number;
+
+  @BelongsTo(() => Member)
+  member!: Member;
+
+  @ForeignKey(() => Role)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'role_id',
+  })
+  role_id!: number;
+
+  @BelongsTo(() => Role)
+  role!: Role;
+}
