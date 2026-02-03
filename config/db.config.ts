@@ -8,6 +8,9 @@ import {
   Role,
   Schedule,
   ServiceAssignment,
+  Transaction,
+  Category,
+  Family,
 } from '../src/model';
 
 const sequelize = new Sequelize({
@@ -41,15 +44,18 @@ const sequelize = new Sequelize({
   models: [
     User,
     Auth,
+    Family,
     Jemaat,
     Event,
     Member,
     Role,
     Schedule,
     ServiceAssignment,
+    Transaction,
+    Category,
   ],
 });
 
-sequelize.sync();
+sequelize.sync({ alter: true });
 
 export default sequelize;

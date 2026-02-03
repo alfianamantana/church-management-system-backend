@@ -9,6 +9,34 @@ import {
 } from 'sequelize-typescript';
 
 @Table({
+  tableName: 'families',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Family extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    comment: 'Nama keluarga',
+  })
+  name!: string;
+
+  @HasMany(() => Jemaat)
+  jemaats?: Jemaat[];
+}
+
+@Table({
   tableName: 'jemaat',
   timestamps: true,
   underscored: true,
@@ -35,7 +63,7 @@ export class Jemaat extends Model {
   })
   dad_id?: number;
 
-  @BelongsTo(() => Jemaat, 'dadId')
+  @BelongsTo(() => Jemaat, 'dad_id')
   dad?: Jemaat;
   @Column({
     type: DataType.INTEGER,
@@ -88,6 +116,17 @@ export class Jemaat extends Model {
     field: 'is_married',
   })
   is_married!: boolean;
+
+  @ForeignKey(() => Family)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    field: 'family_id',
+  })
+  family_id?: number;
+
+  @BelongsTo(() => Family)
+  family?: Family;
 }
 
 @Table({
@@ -407,4 +446,90 @@ export class ServiceAssignment extends Model {
 
   @BelongsTo(() => Role)
   role!: Role;
+}
+
+@Table({
+  tableName: 'categories',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Category extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+    comment: 'ID unik untuk kategori',
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    comment: 'Nama kategori transaksi',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.ENUM('income', 'expense'),
+    allowNull: false,
+  })
+  type!: 'income' | 'expense';
+
+  @HasMany(() => Transaction)
+  transactions?: Transaction[];
+}
+
+@Table({
+  tableName: 'transactions',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Transaction extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+    comment: 'ID unik untuk transaksi',
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: false,
+    comment: 'Tanggal transaksi',
+  })
+  date!: string;
+
+  @ForeignKey(() => Category)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    comment: 'ID kategori yang terkait dengan transaksi',
+  })
+  category_id!: number;
+
+  @BelongsTo(() => Category)
+  category!: Category;
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+    comment: 'Nominal uang transaksi',
+  })
+  amount!: number;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    comment: 'Catatan tambahan untuk transaksi',
+  })
+  note?: string;
 }

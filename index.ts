@@ -8,6 +8,9 @@ import { JemaatRoutes } from './src/routes/jemaat.route';
 import { UserRoutes } from './src/routes/user.route';
 import { EventRoutes } from './src/routes/event.route';
 import { MusicRoutes } from './src/routes/music.route';
+import { TransactionRoutes } from './src/routes/transaction.route';
+import { CategoryRoutes } from './src/routes/category.route';
+import { FamilyRoutes } from './src/routes/family.routes';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
@@ -31,6 +34,18 @@ app.use('/events', eventRouter);
 const musicRouter = express.Router();
 MusicRoutes(musicRouter);
 app.use('/music', musicRouter);
+
+const transactionRouter = express.Router();
+TransactionRoutes(transactionRouter);
+app.use('/transactions', transactionRouter);
+
+const categoryRouter = express.Router();
+CategoryRoutes(categoryRouter);
+app.use('/categories', categoryRouter);
+
+const familyRouter = express.Router();
+FamilyRoutes(familyRouter);
+app.use('/families', familyRouter);
 
 async function main(): Promise<void> {
   try {

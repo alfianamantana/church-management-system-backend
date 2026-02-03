@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import '../config/db.config';
-import { User } from './model';
+import { User, Category } from './model';
 import bcrypt from 'bcrypt';
 async function seedSuperadmin() {
   const email = 'admin@admin.com';
@@ -28,7 +28,38 @@ async function seedSuperadmin() {
   console.log('Superadmin seeded!');
 }
 
-seedSuperadmin()
+async function seedCategories() {
+  const categories = [
+    { name: 'Donasi', type: 'income' as const },
+    { name: 'Persembahan', type: 'income' as const },
+    { name: 'Pengeluaran Kantor', type: 'expense' as const },
+    { name: 'Pengeluaran Acara', type: 'expense' as const },
+    { name: 'Pengeluaran Makanan', type: 'expense' as const },
+    { name: 'Pengeluaran Transportasi', type: 'expense' as const },
+  ];
+
+  for (const cat of categories) {
+    const existing = await Category.findOne({ where: { name: cat.name } });
+    if (!existing) {
+      await Category.create(cat);
+      console.log(`Category "${cat.name}" seeded!`);
+    } else {
+      console.log(`Category "${cat.name}" already exists.`);
+    }
+  }
+}
+
+async function main() {
+  try {
+    await seedSuperadmin();
+    await seedCategories();
+    console.log('Seeding completed!');
+  } catch (error) {
+    console.error('Seeding failed:', error);
+  }
+}
+
+main()
   .then(() => process.exit(0))
   .catch((e) => {
     console.error(e);
