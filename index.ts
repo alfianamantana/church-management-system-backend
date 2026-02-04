@@ -11,6 +11,7 @@ import { MusicRoutes } from './src/routes/music.route';
 import { TransactionRoutes } from './src/routes/transaction.route';
 import { CategoryRoutes } from './src/routes/category.route';
 import { FamilyRoutes } from './src/routes/family.routes';
+import { DashboardRoutes } from './src/routes/dashboard.route';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
@@ -46,6 +47,10 @@ app.use('/categories', categoryRouter);
 const familyRouter = express.Router();
 FamilyRoutes(familyRouter);
 app.use('/families', familyRouter);
+
+const dashboardRouter = express.Router();
+DashboardRoutes(dashboardRouter);
+app.use('/dashboard', dashboardRouter);
 
 async function main(): Promise<void> {
   try {

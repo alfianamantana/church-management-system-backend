@@ -77,7 +77,6 @@ export const EventController = {
         });
 
       const { title, start, end, description } = req.body;
-      console.log(req.body, '??');
 
       const event = await Event.findOne({ where: { id } });
 
