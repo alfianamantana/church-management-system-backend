@@ -5,4 +5,5 @@ export const JemaatRoutes = (router: Router): void => {
   router.put('/', JemaatController.updateJemaat);
   router.post('/', JemaatController.createJemaat);
   router.get('/', JemaatController.getAll);
+  router.delete('/', JemaatController.deleteJemaat);
 };

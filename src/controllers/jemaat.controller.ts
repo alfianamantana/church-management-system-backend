@@ -6,7 +6,16 @@ import { Op } from 'sequelize';
 export const JemaatController = {
   async getAll(req: Request, res: Response) {
     try {
-      let { page = 1, limit = 10, id, q } = req.query;
+      let {
+        page = 1,
+        limit = 10,
+        id,
+        q,
+        family_id,
+        exclude_id,
+        gender,
+      } = req.query;
+
       page = Number(page) || 1;
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
@@ -16,8 +25,36 @@ export const JemaatController = {
       const birth_date_end = req.query.birth_date_end
         ? new Date(String(req.query.birth_date_end))
         : null;
+      const dad =
+        req.query.dad === 'true'
+          ? true
+          : req.query.dad === 'false'
+            ? false
+            : null;
+
+      const mom =
+        req.query.dad === 'true'
+          ? true
+          : req.query.dad === 'false'
+            ? false
+            : null;
 
       let whereClause = {};
+      let includeClause: any[] = [];
+
+      if (gender) {
+        whereClause = {
+          ...whereClause,
+          gender: String(gender),
+        };
+      }
+
+      if (exclude_id) {
+        whereClause = {
+          ...whereClause,
+          id: { [Op.not]: Number(exclude_id) },
+        };
+      }
 
       if (birth_date_start && birth_date_end) {
         whereClause = {
@@ -34,13 +71,35 @@ export const JemaatController = {
       }
 
       if (id) {
-        whereClause = { id: Number(id) };
+        whereClause = {
+          ...whereClause,
+          id: Number(id),
+        };
+      }
+
+      if (family_id) {
+        whereClause = { ...whereClause, family_id: Number(family_id) };
+      }
+
+      if (dad) {
+        includeClause.push({
+          model: Jemaat,
+          as: 'dad',
+        });
+      }
+
+      if (mom) {
+        includeClause.push({
+          model: Jemaat,
+          as: 'mom',
+        });
       }
 
       const { count, rows } = await Jemaat.findAndCountAll({
         offset,
         limit,
         where: whereClause,
+        include: includeClause,
         order: [['id', 'ASC']],
       });
 
@@ -86,6 +145,9 @@ export const JemaatController = {
         is_married,
         mom_id,
         dad_id,
+        phone_number,
+        family_id,
+        gender,
       } = req.body;
 
       const jemaat = await Jemaat.findOne({ where: { id } });
@@ -106,6 +168,10 @@ export const JemaatController = {
       if (typeof is_married !== 'undefined') jemaat.is_married = is_married;
       if (typeof mom_id !== 'undefined') jemaat.mom_id = mom_id;
       if (typeof dad_id !== 'undefined') jemaat.dad_id = dad_id;
+      if (typeof phone_number !== 'undefined')
+        jemaat.phone_number = phone_number;
+      if (typeof family_id !== 'undefined') jemaat.family_id = family_id;
+      if (typeof gender !== 'undefined') jemaat.gender = gender;
 
       await jemaat.save();
 
@@ -135,15 +201,20 @@ export const JemaatController = {
         mom_id,
         dad_id,
         phone_number,
+        gender,
       } = req.body;
 
       const rules = {
         name: 'required|string',
         birth_date: 'required|date',
         born_place: 'required|string',
+        gender: 'required|in:male,female',
       };
 
-      const validation = new Validator({ name, birth_date, born_place }, rules);
+      const validation = new Validator(
+        { name, birth_date, born_place, gender },
+        rules,
+      );
       if (validation.fails())
         return res.json({
           code: 400,
@@ -160,12 +231,55 @@ export const JemaatController = {
         mom_id: mom_id || null,
         dad_id: dad_id || null,
         phone_number: phone_number || null,
+        gender: gender || 'male',
       });
 
       return res.json({
         code: 201,
         status: 'success',
         message: ['Jemaat created successfully'],
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: ['Internal server error'],
+        error: err,
+      });
+    }
+  },
+  async deleteJemaat(req: Request, res: Response) {
+    try {
+      const { id } = req.query;
+
+      const rules = {
+        id: 'required|numeric',
+      };
+
+      const validation = new Validator({ id }, rules);
+      if (validation.fails())
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: validation.errors.all(),
+        });
+
+      const jemaat = await Jemaat.findOne({ where: { id } });
+
+      if (!jemaat) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: ['Jemaat not found'],
+        });
+      }
+
+      await jemaat.destroy();
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        message: ['Jemaat deleted successfully'],
       });
     } catch (err) {
       return res.json({

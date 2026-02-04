@@ -117,6 +117,14 @@ export class Jemaat extends Model {
   })
   is_married!: boolean;
 
+  @Column({
+    type: DataType.ENUM('male', 'female'),
+    allowNull: false,
+    defaultValue: 'male',
+    field: 'gender',
+  })
+  gender!: 'male' | 'female';
+
   @ForeignKey(() => Family)
   @Column({
     type: DataType.INTEGER,
