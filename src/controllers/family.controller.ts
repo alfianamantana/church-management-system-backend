@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { Family, Jemaat } from '../model';
 import Validator from 'validatorjs';
-import { Op, where } from 'sequelize';
+import { Op, where, fn } from 'sequelize';
+import sequelize from '../../config/db.config';
 
 export const FamilyController = {
   async getFamilies(req: Request, res: Response) {
@@ -18,8 +19,20 @@ export const FamilyController = {
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
       let includeClause = [];
+
       if (member) {
-        includeClause.push({ model: Jemaat, as: 'jemaats' });
+        const attributes: (string | [any, string])[] = [
+          ...Object.keys(Jemaat.rawAttributes),
+          [
+            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            'age',
+          ],
+        ];
+        includeClause.push({
+          model: Jemaat,
+          as: 'jemaats',
+          attributes,
+        });
       }
 
       let whereClause = {};

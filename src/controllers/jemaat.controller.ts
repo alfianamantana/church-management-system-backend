@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { Jemaat } from '../model';
 import Validator from 'validatorjs';
-import { Op } from 'sequelize';
+import { Op, fn } from 'sequelize';
+import sequelize from '../../config/db.config';
 
 export const JemaatController = {
   async getAll(req: Request, res: Response) {
@@ -100,6 +101,13 @@ export const JemaatController = {
         limit,
         where: whereClause,
         include: includeClause,
+        attributes: [
+          ...Object.keys(Jemaat.rawAttributes),
+          [
+            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            'age',
+          ],
+        ],
         order: [['id', 'ASC']],
       });
 

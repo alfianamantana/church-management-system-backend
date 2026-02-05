@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Family, Jemaat, Event } from '../model';
-import { QueryTypes, literal } from 'sequelize';
+import { QueryTypes, literal, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
 
 export const DashboardController = {
@@ -55,7 +55,15 @@ export const DashboardController = {
       // Get birthdays this month
       const birthdaysThisMonth = await Jemaat.findAll({
         where: literal(`EXTRACT(MONTH FROM birth_date) = ${currentMonth}`),
-        attributes: ['id', 'name', 'birth_date'],
+        attributes: [
+          'id',
+          'name',
+          'birth_date',
+          [
+            sequelize.literal(`${currentYear} - EXTRACT(YEAR FROM birth_date)`),
+            'age',
+          ],
+        ],
         order: [['birth_date', 'ASC']],
       });
 
@@ -75,8 +83,6 @@ export const DashboardController = {
         },
       });
     } catch (error) {
-      console.log(error, 'asdasd?');
-
       return res.json({
         code: 500,
         status: 'error',

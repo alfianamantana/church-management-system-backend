@@ -1,7 +1,15 @@
 import { Request, Response } from 'express';
 import { Member, Role, Schedule, ServiceAssignment } from '../model';
 import Validator from 'validatorjs';
-import { Op } from 'sequelize';
+import { Op, Includeable } from 'sequelize';
+
+interface IScheduleInput {
+  service_name: string;
+  scheduled_at: Date;
+  instruments_assignments?: {
+    [key: string]: number[]; // instrument_id: member_id[]
+  };
+}
 
 export const MusicController = {
   // Member CRUD
@@ -311,6 +319,21 @@ export const MusicController = {
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
+      const musician = req.query.musician === 'true';
+
+      let include: Includeable[] = [];
+      if (musician) {
+        include = [
+          {
+            model: ServiceAssignment,
+            as: 'serviceAssignments',
+            include: [
+              { model: Member, as: 'member' },
+              { model: Role, as: 'role' },
+            ],
+          },
+        ];
+      }
       let whereClause = {};
       if (q) {
         whereClause = { service_name: { [Op.iLike]: `%${q}%` } };
@@ -321,6 +344,7 @@ export const MusicController = {
         limit,
         where: whereClause,
         order: [['scheduled_at', 'ASC']],
+        include,
       });
 
       return res.json({
@@ -330,6 +354,8 @@ export const MusicController = {
         pagination: { total: count, page },
       });
     } catch (err) {
+      console.log(err, '??');
+
       return res.json({
         code: 500,
         status: 'error',
@@ -340,15 +366,19 @@ export const MusicController = {
   },
 
   async createSchedule(req: Request, res: Response) {
+    let transaction;
     try {
-      const { service_name, scheduled_at } = req.body;
+      console.log(req.body, '???');
+
+      const { schedules = [] } = req.body;
+      console.log(JSON.stringify(schedules), '?as');
 
       const rules = {
-        service_name: 'required|string',
-        scheduled_at: 'required|date',
+        schedules: 'required|array',
+        'schedules.*.service_name': 'required|string',
+        'schedules.*.scheduled_at': 'required|date',
       };
-
-      const validation = new Validator({ service_name, scheduled_at }, rules);
+      const validation = new Validator({ schedules }, rules);
       if (validation.fails())
         return res.json({
           code: 400,
@@ -356,14 +386,47 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      await Schedule.create({ service_name, scheduled_at });
+      transaction = await Schedule.sequelize?.transaction();
+
+      for (const sch of schedules) {
+        let createdSchedule = await Schedule.create(
+          {
+            service_name: sch.service_name,
+            scheduled_at: sch.scheduled_at,
+          },
+          { transaction },
+        );
+
+        // Handle instrument assignments if provided
+        if (sch.instrument_assignments) {
+          for (const instrument_id in sch.instrument_assignments) {
+            const member_ids: number[] =
+              sch.instrument_assignments[instrument_id];
+            for (const member_id of member_ids) {
+              await ServiceAssignment.create(
+                {
+                  schedule_id: createdSchedule.id,
+                  member_id,
+                  role_id: Number(instrument_id), // assuming instrument_id maps to role_id
+                },
+                { transaction },
+              );
+            }
+          }
+        }
+      }
+
+      await transaction?.commit();
 
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Schedule created successfully'],
+        message: ['Schedules created successfully'],
       });
     } catch (err) {
+      if (transaction) {
+        await transaction.rollback();
+      }
       return res.json({
         code: 500,
         status: 'error',
