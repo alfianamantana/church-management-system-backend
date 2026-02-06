@@ -11,6 +11,7 @@ import {
   Transaction,
   Category,
   Family,
+  Asset,
 } from '../src/model';
 
 const sequelize = new Sequelize({
@@ -43,19 +44,20 @@ const sequelize = new Sequelize({
   logging: false,
   models: [
     User,
-    Auth,
+    Category,
     Family,
     Jemaat,
-    Event,
     Member,
     Role,
     Schedule,
     ServiceAssignment,
     Transaction,
-    Category,
+    Asset,
+    Event,
+    Auth,
   ],
 });
 
-sequelize.sync({ alter: true });
+sequelize.sync();
 
 export default sequelize;

@@ -95,7 +95,6 @@ export const JemaatController = {
           as: 'mom',
         });
       }
-
       const { count, rows } = await Jemaat.findAndCountAll({
         offset,
         limit,
@@ -288,6 +287,57 @@ export const JemaatController = {
         code: 200,
         status: 'success',
         message: ['Jemaat deleted successfully'],
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: ['Internal server error'],
+        error: err,
+      });
+    }
+  },
+  async getBirthdayByMonth(req: Request, res: Response) {
+    try {
+      const { date } = req.query;
+      if (!date) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: ['Date is required'],
+        });
+      }
+
+      const parsedDate = new Date(String(date));
+      if (isNaN(parsedDate.getTime())) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: ['Invalid date format'],
+        });
+      }
+
+      const month = parsedDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
+
+      const jemaats = await Jemaat.findAll({
+        where: sequelize.where(
+          sequelize.fn('EXTRACT', sequelize.literal('MONTH FROM birth_date')),
+          month,
+        ),
+        attributes: [
+          ...Object.keys(Jemaat.rawAttributes),
+          [
+            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            'age',
+          ],
+        ],
+        order: [['birth_date', 'ASC']],
+      });
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        data: jemaats,
       });
     } catch (err) {
       return res.json({

@@ -90,8 +90,6 @@ export const TransactionController = {
         message: ['Transaction created successfully'],
       });
     } catch (err) {
-      console.log(err, '???');
-
       return res.json({
         code: 500,
         status: 'error',

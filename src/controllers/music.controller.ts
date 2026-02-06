@@ -320,7 +320,7 @@ export const MusicController = {
       const offset = (page - 1) * limit;
 
       const musician = req.query.musician === 'true';
-
+      const id = req.query.id ? Number(req.query.id) : null;
       let include: Includeable[] = [];
       if (musician) {
         include = [
@@ -334,9 +334,18 @@ export const MusicController = {
           },
         ];
       }
+
       let whereClause = {};
+
+      if (id) {
+        whereClause = { id };
+      }
+
       if (q) {
-        whereClause = { service_name: { [Op.iLike]: `%${q}%` } };
+        whereClause = {
+          ...whereClause,
+          service_name: { [Op.iLike]: `%${q}%` },
+        };
       }
 
       const { count, rows } = await Schedule.findAndCountAll({
@@ -354,8 +363,56 @@ export const MusicController = {
         pagination: { total: count, page },
       });
     } catch (err) {
-      console.log(err, '??');
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: ['Internal server error'],
+        error: err,
+      });
+    }
+  },
 
+  async getSchedule(req: Request, res: Response) {
+    try {
+      const { id } = req.query;
+
+      const rules = { id: 'required|numeric' };
+      const validation = new Validator({ id }, rules);
+      if (validation.fails())
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: validation.errors.all(),
+        });
+
+      const schedule = await Schedule.findOne({
+        where: { id: Number(id) },
+        include: [
+          {
+            model: ServiceAssignment,
+            as: 'serviceAssignments',
+            include: [
+              { model: Member, as: 'member' },
+              { model: Role, as: 'role' },
+            ],
+          },
+        ],
+      });
+
+      if (!schedule) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: ['Schedule not found'],
+        });
+      }
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        data: schedule,
+      });
+    } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
@@ -368,10 +425,7 @@ export const MusicController = {
   async createSchedule(req: Request, res: Response) {
     let transaction;
     try {
-      console.log(req.body, '???');
-
       const { schedules = [] } = req.body;
-      console.log(JSON.stringify(schedules), '?as');
 
       const rules = {
         schedules: 'required|array',
@@ -437,12 +491,16 @@ export const MusicController = {
   },
 
   async updateSchedule(req: Request, res: Response) {
+    let transaction;
     try {
-      const { id } = req.query;
-      const { service_name, scheduled_at } = req.body;
+      const { schedules = [] } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
+      const rules = {
+        schedules: 'required|array',
+        'schedules.*.service_name': 'required|string',
+        'schedules.*.scheduled_at': 'required|date',
+      };
+      const validation = new Validator({ schedules }, rules);
       if (validation.fails())
         return res.json({
           code: 400,
@@ -450,26 +508,69 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const schedule = await Schedule.findOne({ where: { id: Number(id) } });
-      if (!schedule) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: ['Schedule not found'],
+      transaction = await Schedule.sequelize?.transaction();
+
+      for (const sch of schedules) {
+        let schedule;
+        if (sch.id) {
+          // Update existing schedule
+          schedule = await Schedule.findOne({
+            where: { id: sch.id },
+            transaction,
+          });
+          if (!schedule) {
+            throw new Error(`Schedule with id ${sch.id} not found`);
+          }
+          schedule.service_name = sch.service_name;
+          schedule.scheduled_at = sch.scheduled_at;
+          await schedule.save({ transaction });
+        } else {
+          // Create new schedule if no id (though for update, probably all have id)
+          schedule = await Schedule.create(
+            {
+              service_name: sch.service_name,
+              scheduled_at: sch.scheduled_at,
+            },
+            { transaction },
+          );
+        }
+
+        // Delete existing assignments for this schedule
+        await ServiceAssignment.destroy({
+          where: { schedule_id: schedule.id },
+          transaction,
         });
+
+        // Handle instrument assignments if provided
+        if (sch.instrument_assignments) {
+          for (const instrument_id in sch.instrument_assignments) {
+            const member_ids: number[] =
+              sch.instrument_assignments[instrument_id];
+            for (const member_id of member_ids) {
+              await ServiceAssignment.create(
+                {
+                  schedule_id: schedule.id,
+                  member_id,
+                  role_id: Number(instrument_id), // assuming instrument_id maps to role_id
+                },
+                { transaction },
+              );
+            }
+          }
+        }
       }
 
-      if (service_name) schedule.service_name = service_name;
-      if (scheduled_at) schedule.scheduled_at = scheduled_at;
-      await schedule.save();
+      await transaction?.commit();
 
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Schedule updated successfully'],
-        data: schedule,
+        message: ['Schedules updated successfully'],
       });
     } catch (err) {
+      if (transaction) {
+        await transaction.rollback();
+      }
       return res.json({
         code: 500,
         status: 'error',

@@ -12,6 +12,7 @@ import { TransactionRoutes } from './src/routes/transaction.route';
 import { CategoryRoutes } from './src/routes/category.route';
 import { FamilyRoutes } from './src/routes/family.routes';
 import { DashboardRoutes } from './src/routes/dashboard.route';
+import { AssetRoutes } from './src/routes/asset.route';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
@@ -51,6 +52,10 @@ app.use('/families', familyRouter);
 const dashboardRouter = express.Router();
 DashboardRoutes(dashboardRouter);
 app.use('/dashboard', dashboardRouter);
+
+const assetRouter = express.Router();
+AssetRoutes(assetRouter);
+app.use('/assets', assetRouter);
 
 async function main(): Promise<void> {
   try {

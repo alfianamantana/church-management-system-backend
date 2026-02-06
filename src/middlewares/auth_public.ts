@@ -1,7 +1,11 @@
-import { NextFunction, Request, Response } from "express"
+import { NextFunction, Request, Response } from 'express';
 
-export const auth_public = (req: Request, res: Response, next: NextFunction) => {
-  const authorization = req.headers['authorization']
+export const auth_public = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const authorization = req.headers['authorization'];
 
   if (!authorization) {
     return res.json({
@@ -20,4 +24,4 @@ export const auth_public = (req: Request, res: Response, next: NextFunction) => 
   //   });
   // }
   next();
-}
+};

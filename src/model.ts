@@ -9,6 +9,106 @@ import {
 } from 'sequelize-typescript';
 
 @Table({
+  tableName: 'users',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class User extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    unique: true,
+    allowNull: true,
+    field: 'unique_key',
+  })
+  unique_key?: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    unique: true,
+    field: 'email',
+  })
+  email!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+  })
+  password!: string;
+
+  @Column({
+    type: DataType.STRING(30),
+    allowNull: false,
+    field: 'phone_number',
+  })
+  phone_number!: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'subscribe_until',
+  })
+  subscribe_until?: Date;
+
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: false,
+    defaultValue: 'user',
+  })
+  role!: 'superadmin' | 'user';
+
+  @Column({
+    type: DataType.STRING(10),
+    allowNull: false,
+    defaultValue: 'basic',
+    field: 'subscribe_type',
+  })
+  subscribe_type!: 'basic' | 'full';
+
+  @HasMany(() => Event)
+  events?: Event[];
+
+  @HasMany(() => Schedule)
+  schedules?: Schedule[];
+
+  @HasMany(() => Transaction)
+  transactions?: Transaction[];
+
+  @HasMany(() => Asset)
+  assets?: Asset[];
+
+  @HasMany(() => Role)
+  roles?: Role[];
+
+  @HasMany(() => Family)
+  families?: Family[];
+
+  @HasMany(() => Jemaat)
+  jemaats?: Jemaat[];
+
+  @HasMany(() => Category)
+  categories?: Category[];
+}
+
+@Table({
   tableName: 'families',
   timestamps: true,
   underscored: true,
@@ -24,6 +124,17 @@ export class Family extends Model {
     allowNull: false,
   })
   id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
 
   @Column({
     type: DataType.STRING(255),
@@ -52,7 +163,7 @@ export class Jemaat extends Model {
   })
   mom_id?: number;
 
-  @BelongsTo(() => Jemaat, 'mom_id')
+  @BelongsTo(() => Jemaat, { foreignKey: 'mom_id', as: 'mom' })
   mom?: Jemaat;
 
   @ForeignKey(() => Jemaat)
@@ -63,7 +174,7 @@ export class Jemaat extends Model {
   })
   dad_id?: number;
 
-  @BelongsTo(() => Jemaat, 'dad_id')
+  @BelongsTo(() => Jemaat, { foreignKey: 'dad_id', as: 'dad' })
   dad?: Jemaat;
   @Column({
     type: DataType.INTEGER,
@@ -73,6 +184,17 @@ export class Jemaat extends Model {
     allowNull: false,
   })
   id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
 
   @Column({
     type: DataType.STRING(255),
@@ -135,77 +257,6 @@ export class Jemaat extends Model {
 
   @BelongsTo(() => Family)
   family?: Family;
-}
-
-@Table({
-  tableName: 'users',
-  timestamps: true,
-  underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
-})
-export class User extends Model {
-  @Column({
-    type: DataType.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-    unique: true,
-    allowNull: false,
-  })
-  id!: number;
-
-  @Column({
-    type: DataType.STRING(255),
-    allowNull: false,
-    field: 'name',
-  })
-  name!: string;
-
-  @Column({
-    type: DataType.STRING(255),
-    allowNull: false,
-    unique: true,
-    field: 'email',
-  })
-  email!: string;
-
-  @Column({
-    type: DataType.STRING(255),
-    allowNull: false,
-  })
-  password!: string;
-
-  @Column({
-    type: DataType.STRING(30),
-    allowNull: false,
-    field: 'phone_number',
-  })
-  phone_number!: string;
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: true,
-    field: 'subscribe_until',
-  })
-  subscribe_until?: Date;
-
-  @Column({
-    type: DataType.ENUM('superadmin', 'user'),
-    allowNull: false,
-    defaultValue: 'user',
-  })
-  role!: 'superadmin' | 'user';
-
-  @Column({
-    type: DataType.ENUM('basic', 'full'),
-    allowNull: false,
-    defaultValue: 'basic',
-    field: 'subscribe_type',
-  })
-  subscribe_type!: 'basic' | 'full';
-
-  @HasMany(() => Event)
-  events?: Event[];
 }
 
 @Table({
@@ -359,6 +410,17 @@ export class Role extends Model {
   })
   id!: number;
 
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
@@ -386,6 +448,17 @@ export class Schedule extends Model {
     allowNull: false,
   })
   id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
 
   @Column({
     type: DataType.STRING(255),
@@ -474,6 +547,17 @@ export class Category extends Model {
   })
   id!: number;
 
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
@@ -509,6 +593,17 @@ export class Transaction extends Model {
   })
   id!: number;
 
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
   @Column({
     type: DataType.DATEONLY,
     allowNull: false,
@@ -540,4 +635,91 @@ export class Transaction extends Model {
     comment: 'Catatan tambahan untuk transaksi',
   })
   note?: string;
+}
+
+@Table({
+  tableName: 'assets',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Asset extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+    comment: 'ID unik untuk asset',
+  })
+  id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    comment: 'Nama asset',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    comment: 'Deskripsi asset',
+  })
+  description?: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    comment: 'Nilai asset',
+  })
+  value?: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    comment: 'Tanggal perolehan asset',
+    field: 'acquisition_date',
+  })
+  acquisition_date?: Date;
+
+  @Column({
+    type: DataType.ENUM('excellent', 'good', 'fair', 'poor', 'damaged'),
+    allowNull: false,
+    defaultValue: 'good',
+  })
+  condition!: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    comment: 'Lokasi asset',
+  })
+  location?: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    comment: 'Kategori asset',
+  })
+  category?: string;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    comment: 'Catatan tambahan untuk asset',
+  })
+  notes?: string;
 }

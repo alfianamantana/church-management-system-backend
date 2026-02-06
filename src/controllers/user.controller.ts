@@ -14,6 +14,7 @@ export const UserController = {
         oldPassword: 'required|string',
         newPassword: 'required|string|min:6',
       };
+
       const validation = new Validator(
         { email, oldPassword, newPassword },
         rules,
