@@ -9,9 +9,12 @@ export const getAssets = async (req: Request, res: Response) => {
     limit = Number(limit) || 10;
     const offset = (page - 1) * limit;
 
-    let whereClause = {};
+    let whereClause: any = {
+      user_id: req.user?.id,
+    };
     if (q) {
       whereClause = {
+        ...whereClause,
         [Op.or]: [
           { name: { [Op.iLike]: `%${q}%` } },
           { description: { [Op.iLike]: `%${q}%` } },
@@ -35,6 +38,10 @@ export const getAssets = async (req: Request, res: Response) => {
       code: 200,
       status: 'success',
       data: rows,
+      message: {
+        id: ['Data Aset berhasil diambil'],
+        en: ['Assets retrieved successfully'],
+      },
       pagination: {
         total: count,
         page,
@@ -46,7 +53,10 @@ export const getAssets = async (req: Request, res: Response) => {
     res.json({
       code: 500,
       status: 'error',
-      message: ['Internal server error'],
+      message: {
+        id: ['Terjadi kesalahan pada server'],
+        en: ['Internal server error'],
+      },
     });
   }
 };
@@ -65,6 +75,7 @@ export const createAsset = async (req: Request, res: Response) => {
     } = req.body;
 
     const asset = await Asset.create({
+      user_id: req.user?.id,
       name,
       description,
       value,
@@ -77,14 +88,20 @@ export const createAsset = async (req: Request, res: Response) => {
 
     res.json({
       code: 201,
-      message: ['Asset created successfully'],
+      message: {
+        id: ['Aset berhasil dibuat'],
+        en: ['Asset created successfully'],
+      },
       data: asset,
     });
   } catch (error) {
     console.error('Error creating asset:', error);
     res.json({
       code: 500,
-      message: ['Internal server error'],
+      message: {
+        id: ['Terjadi kesalahan pada server'],
+        en: ['Internal server error'],
+      },
     });
   }
 };
@@ -105,10 +122,13 @@ export const updateAsset = async (req: Request, res: Response) => {
 
     const asset = await Asset.findByPk(id);
 
-    if (!asset) {
-      return res.status(404).json({
+    if (!asset || asset.user_id !== req.user?.id) {
+      return res.json({
         code: 404,
-        message: ['Asset not found'],
+        message: {
+          id: ['Aset tidak ditemukan'],
+          en: ['Asset not found'],
+        },
       });
     }
 
@@ -125,13 +145,19 @@ export const updateAsset = async (req: Request, res: Response) => {
 
     res.json({
       code: 200,
-      message: ['Asset updated successfully'],
+      message: {
+        id: ['Aset berhasil diperbarui'],
+        en: ['Asset updated successfully'],
+      },
       data: asset,
     });
   } catch (error) {
     res.json({
       code: 500,
-      message: ['Internal server error'],
+      message: {
+        id: ['Terjadi kesalahan pada server'],
+        en: ['Internal server error'],
+      },
     });
   }
 };
@@ -141,10 +167,13 @@ export const deleteAsset = async (req: Request, res: Response) => {
     const id = Number(req.query.id);
     const asset = await Asset.findByPk(id);
 
-    if (!asset) {
-      return res.status(404).json({
+    if (!asset || asset.user_id !== req.user?.id) {
+      return res.json({
         code: 404,
-        message: ['Asset not found'],
+        message: {
+          id: ['Aset tidak ditemukan'],
+          en: ['Asset not found'],
+        },
       });
     }
 
@@ -152,12 +181,18 @@ export const deleteAsset = async (req: Request, res: Response) => {
 
     res.json({
       code: 200,
-      message: ['Asset deleted successfully'],
+      message: {
+        id: ['Aset berhasil dihapus'],
+        en: ['Asset deleted successfully'],
+      },
     });
   } catch (error) {
     res.json({
       code: 500,
-      message: ['Internal server error'],
+      message: {
+        id: ['Terjadi kesalahan pada server'],
+        en: ['Internal server error'],
+      },
     });
   }
 };

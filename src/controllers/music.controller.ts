@@ -20,9 +20,11 @@ export const MusicController = {
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
-      let whereClause = {};
+      let whereClause: any = {
+        user_id: req.user?.id,
+      };
       if (q) {
-        whereClause = { name: { [Op.iLike]: `%${q}%` } };
+        whereClause = { ...whereClause, name: { [Op.iLike]: `%${q}%` } };
       }
 
       const { count, rows } = await Member.findAndCountAll({
@@ -65,7 +67,7 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      await Member.create({ name, phone });
+      await Member.create({ user_id: req.user?.id, name, phone });
 
       return res.json({
         code: 201,
@@ -96,7 +98,9 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const member = await Member.findOne({ where: { id: Number(id) } });
+      const member = await Member.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!member) {
         return res.json({
           code: 404,
@@ -138,7 +142,9 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const member = await Member.findOne({ where: { id: Number(id) } });
+      const member = await Member.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!member) {
         return res.json({
           code: 404,
@@ -172,9 +178,11 @@ export const MusicController = {
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
-      let whereClause = {};
+      let whereClause: any = {
+        user_id: req.user?.id,
+      };
       if (q) {
-        whereClause = { role_name: { [Op.iLike]: `%${q}%` } };
+        whereClause = { ...whereClause, role_name: { [Op.iLike]: `%${q}%` } };
       }
 
       const { count, rows } = await Role.findAndCountAll({
@@ -213,7 +221,7 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      await Role.create({ role_name });
+      await Role.create({ user_id: req.user?.id, role_name });
 
       return res.json({
         code: 201,
@@ -244,7 +252,9 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const role = await Role.findOne({ where: { id: Number(id) } });
+      const role = await Role.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!role) {
         return res.json({
           code: 404,
@@ -285,7 +295,9 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const role = await Role.findOne({ where: { id: Number(id) } });
+      const role = await Role.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!role) {
         return res.json({
           code: 404,
@@ -335,10 +347,12 @@ export const MusicController = {
         ];
       }
 
-      let whereClause = {};
+      let whereClause: any = {
+        user_id: req.user?.id,
+      };
 
       if (id) {
-        whereClause = { id };
+        whereClause = { ...whereClause, id };
       }
 
       if (q) {
@@ -386,7 +400,7 @@ export const MusicController = {
         });
 
       const schedule = await Schedule.findOne({
-        where: { id: Number(id) },
+        where: { id: Number(id), user_id: req.user?.id },
         include: [
           {
             model: ServiceAssignment,
@@ -445,6 +459,7 @@ export const MusicController = {
       for (const sch of schedules) {
         let createdSchedule = await Schedule.create(
           {
+            user_id: req.user?.id,
             service_name: sch.service_name,
             scheduled_at: sch.scheduled_at,
           },
@@ -515,7 +530,7 @@ export const MusicController = {
         if (sch.id) {
           // Update existing schedule
           schedule = await Schedule.findOne({
-            where: { id: sch.id },
+            where: { id: sch.id, user_id: req.user?.id },
             transaction,
           });
           if (!schedule) {
@@ -528,6 +543,7 @@ export const MusicController = {
           // Create new schedule if no id (though for update, probably all have id)
           schedule = await Schedule.create(
             {
+              user_id: req.user?.id,
               service_name: sch.service_name,
               scheduled_at: sch.scheduled_at,
             },
@@ -593,7 +609,9 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      const schedule = await Schedule.findOne({ where: { id: Number(id) } });
+      const schedule = await Schedule.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!schedule) {
         return res.json({
           code: 404,
@@ -630,6 +648,7 @@ export const MusicController = {
       const { count, rows } = await ServiceAssignment.findAndCountAll({
         offset,
         limit,
+        where: { user_id: req.user?.id },
         include: [
           { model: Schedule, as: 'schedule' },
           { model: Member, as: 'member' },
@@ -676,7 +695,9 @@ export const MusicController = {
         });
 
       // Check if schedule exists
-      const schedule = await Schedule.findOne({ where: { id: schedule_id } });
+      const schedule = await Schedule.findOne({
+        where: { id: schedule_id, user_id: req.user?.id },
+      });
       if (!schedule) {
         return res.json({
           code: 404,
@@ -686,7 +707,9 @@ export const MusicController = {
       }
 
       // Check if member exists
-      const member = await Member.findOne({ where: { id: member_id } });
+      const member = await Member.findOne({
+        where: { id: member_id, user_id: req.user?.id },
+      });
       if (!member) {
         return res.json({
           code: 404,
@@ -696,7 +719,9 @@ export const MusicController = {
       }
 
       // Check if role exists
-      const role = await Role.findOne({ where: { id: role_id } });
+      const role = await Role.findOne({
+        where: { id: role_id, user_id: req.user?.id },
+      });
       if (!role) {
         return res.json({
           code: 404,
@@ -713,11 +738,13 @@ export const MusicController = {
             as: 'schedule',
             where: {
               scheduled_at: schedule.scheduled_at,
+              user_id: req.user?.id, // Add user_id filter to schedule
             },
           },
         ],
         where: {
           member_id,
+          user_id: req.user?.id, // Add user_id filter
           schedule_id: { [Op.ne]: schedule_id },
         },
       });
@@ -732,7 +759,12 @@ export const MusicController = {
         });
       }
 
-      await ServiceAssignment.create({ schedule_id, member_id, role_id });
+      await ServiceAssignment.create({
+        user_id: req.user?.id,
+        schedule_id,
+        member_id,
+        role_id,
+      });
 
       return res.json({
         code: 201,
@@ -764,7 +796,7 @@ export const MusicController = {
         });
 
       const assignment = await ServiceAssignment.findOne({
-        where: { id: Number(id) },
+        where: { id: Number(id), user_id: req.user?.id },
       });
       if (!assignment) {
         return res.json({
@@ -775,7 +807,9 @@ export const MusicController = {
       }
 
       if (schedule_id) {
-        const sch = await Schedule.findOne({ where: { id: schedule_id } });
+        const sch = await Schedule.findOne({
+          where: { id: schedule_id, user_id: req.user?.id },
+        });
         if (!sch)
           return res.json({
             code: 404,
@@ -785,7 +819,9 @@ export const MusicController = {
         assignment.schedule_id = schedule_id;
       }
       if (member_id) {
-        const mem = await Member.findOne({ where: { id: member_id } });
+        const mem = await Member.findOne({
+          where: { id: member_id, user_id: req.user?.id },
+        });
         if (!mem)
           return res.json({
             code: 404,
@@ -795,7 +831,9 @@ export const MusicController = {
         assignment.member_id = member_id;
       }
       if (role_id) {
-        const rol = await Role.findOne({ where: { id: role_id } });
+        const rol = await Role.findOne({
+          where: { id: role_id, user_id: req.user?.id },
+        });
         if (!rol)
           return res.json({
             code: 404,
@@ -809,7 +847,9 @@ export const MusicController = {
       if (member_id || schedule_id) {
         const currentSchId = schedule_id || assignment.schedule_id;
         const currentMemberId = member_id || assignment.member_id;
-        const sch = await Schedule.findOne({ where: { id: currentSchId } });
+        const sch = await Schedule.findOne({
+          where: { id: currentSchId, user_id: req.user?.id },
+        });
         if (!sch) {
           return res.json({
             code: 404,
@@ -822,11 +862,12 @@ export const MusicController = {
             {
               model: Schedule,
               as: 'schedule',
-              where: { scheduled_at: sch.scheduled_at },
+              where: { scheduled_at: sch.scheduled_at, user_id: req.user?.id },
             },
           ],
           where: {
             member_id: currentMemberId,
+            user_id: req.user?.id,
             schedule_id: { [Op.ne]: currentSchId },
             id: { [Op.ne]: id },
           },
@@ -874,7 +915,7 @@ export const MusicController = {
         });
 
       const assignment = await ServiceAssignment.findOne({
-        where: { id: Number(id) },
+        where: { id: Number(id), user_id: req.user?.id },
       });
       if (!assignment) {
         return res.json({

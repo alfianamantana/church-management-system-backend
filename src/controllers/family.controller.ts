@@ -35,10 +35,10 @@ export const FamilyController = {
         });
       }
 
-      let whereClause = {};
+      let whereClause: any = { user_id: req.user?.id }; // Add user filter
 
       if (id) {
-        whereClause = { id: Number(id) };
+        whereClause = { ...whereClause, id: Number(id) };
       }
 
       if (q) {
@@ -61,12 +61,19 @@ export const FamilyController = {
         status: 'success',
         data: rows,
         pagination: { total: count, page: pageNum, limit: limitNum },
+        message: {
+          id: ['Keluarga berhasil diambil'],
+          en: ['Families retrieved successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -94,13 +101,13 @@ export const FamilyController = {
         });
       }
 
-      const family = await Family.create({ name });
+      const family = await Family.create({ name, user_id: req.user?.id });
 
       // Update jemaat family_id
       if (jemaat_ids && jemaat_ids.length > 0) {
         await Jemaat.update(
           { family_id: family.id },
-          { where: { id: jemaat_ids } },
+          { where: { id: jemaat_ids, user_id: req.user?.id } }, // Add user filter
         );
       }
 
@@ -108,13 +115,19 @@ export const FamilyController = {
         code: 201,
         status: 'success',
         data: family,
-        message: ['Family created successfully'],
+        message: {
+          id: ['Keluarga berhasil dibuat'],
+          en: ['Family created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -143,12 +156,17 @@ export const FamilyController = {
         });
       }
 
-      const family = await Family.findOne({ where: { id: Number(id) } });
+      const family = await Family.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!family) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Family not found'],
+          message: {
+            id: ['Keluarga tidak ditemukan'],
+            en: ['Family not found'],
+          },
         });
       }
 
@@ -157,7 +175,7 @@ export const FamilyController = {
       // Handle jemaat updates
       if (jemaat_ids !== undefined) {
         const currentJemaat = await Jemaat.findAll({
-          where: { family_id: family.id },
+          where: { family_id: family.id, user_id: req.user?.id }, // Add user filter
         });
         const currentIds = currentJemaat.map((j) => j.id);
         const selectedIds = jemaat_ids || [];
@@ -168,12 +186,15 @@ export const FamilyController = {
         if (toAdd.length > 0) {
           await Jemaat.update(
             { family_id: family.id },
-            { where: { id: toAdd } },
+            { where: { id: toAdd, user_id: req.user?.id } }, // Add user filter
           );
         }
 
         if (toRemove.length > 0) {
-          await Jemaat.update({ family_id: null }, { where: { id: toRemove } });
+          await Jemaat.update(
+            { family_id: null },
+            { where: { id: toRemove, user_id: req.user?.id } },
+          ); // Add user filter
         }
       }
 
@@ -181,13 +202,19 @@ export const FamilyController = {
         code: 200,
         status: 'success',
         data: family,
-        message: ['Family updated successfully'],
+        message: {
+          id: ['Keluarga berhasil diperbarui'],
+          en: ['Family updated successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -198,12 +225,17 @@ export const FamilyController = {
     try {
       const id = req.query.id as string;
 
-      const family = await Family.findOne({ where: { id: Number(id) } });
+      const family = await Family.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
       if (!family) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Family not found'],
+          message: {
+            id: ['Keluarga tidak ditemukan'],
+            en: ['Family not found'],
+          },
         });
       }
 
@@ -212,13 +244,19 @@ export const FamilyController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Family deleted successfully'],
+        message: {
+          id: ['Keluarga berhasil dihapus'],
+          en: ['Family deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }

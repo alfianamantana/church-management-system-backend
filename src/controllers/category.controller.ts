@@ -4,19 +4,25 @@ import { Category } from '../model';
 export const getCategories = async (req: Request, res: Response) => {
   try {
     const categories = await Category.findAll({
+      where: { user_id: req.user?.id },
       order: [['createdAt', 'ASC']],
     });
 
-    res.status(200).json({
+    res.json({
       code: 200,
-      message: ['Categories retrieved successfully'],
+      message: {
+        id: ['Kategori berhasil diambil'],
+        en: ['Categories retrieved successfully'],
+      },
       data: categories,
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({
+    res.json({
       code: 500,
-      message: ['Internal server error'],
+      message: {
+        id: ['Terjadi kesalahan pada server'],
+        en: ['Internal server error'],
+      },
     });
   }
 };

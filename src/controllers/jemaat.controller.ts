@@ -26,21 +26,12 @@ export const JemaatController = {
       const birth_date_end = req.query.birth_date_end
         ? new Date(String(req.query.birth_date_end))
         : null;
-      const dad =
-        req.query.dad === 'true'
-          ? true
-          : req.query.dad === 'false'
-            ? false
-            : null;
 
-      const mom =
-        req.query.dad === 'true'
-          ? true
-          : req.query.dad === 'false'
-            ? false
-            : null;
+      const dad = req.query.dad === 'true' ? true : false;
+      const mom = req.query.dad === 'true' ? true : false;
+      const children = req.query.children === 'true' ? true : false;
 
-      let whereClause = {};
+      let whereClause: any = { user_id: req.user?.id }; // Add user filter
       let includeClause: any[] = [];
 
       if (gender) {
@@ -95,6 +86,21 @@ export const JemaatController = {
           as: 'mom',
         });
       }
+
+      if (children) {
+        includeClause.push({
+          model: Jemaat,
+          as: 'children',
+          where: {
+            [Op.or]: [
+              { mom_id: { [Op.col]: 'Jemaat.id' } },
+              { dad_id: { [Op.col]: 'Jemaat.id' } },
+            ],
+          },
+          required: false,
+        });
+      }
+
       const { count, rows } = await Jemaat.findAndCountAll({
         offset,
         limit,
@@ -113,6 +119,10 @@ export const JemaatController = {
       return res.json({
         code: 200,
         status: 'success',
+        message: {
+          id: ['Data Jemaat berhasil diambil'],
+          en: ['Congregation data retrieved successfully'],
+        },
         data: rows,
         pagination: {
           total: count,
@@ -123,7 +133,10 @@ export const JemaatController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -141,7 +154,10 @@ export const JemaatController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Permintaan tidak valid'],
+            en: ['Invalid request'],
+          },
         });
 
       const {
@@ -157,13 +173,18 @@ export const JemaatController = {
         gender,
       } = req.body;
 
-      const jemaat = await Jemaat.findOne({ where: { id } });
+      const jemaat = await Jemaat.findOne({
+        where: { id, user_id: req.user?.id },
+      });
 
       if (!jemaat) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Jemaat not found'],
+          message: {
+            id: ['Jemaat tidak ditemukan'],
+            en: ['Congregation not found'],
+          },
         });
       }
 
@@ -185,14 +206,20 @@ export const JemaatController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Jemaat updated successfully'],
+        message: {
+          id: ['Jemaat berhasil diperbarui'],
+          en: ['Congregation updated successfully'],
+        },
         data: jemaat,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -239,18 +266,25 @@ export const JemaatController = {
         dad_id: dad_id || null,
         phone_number: phone_number || null,
         gender: gender || 'male',
+        user_id: req.user?.id, // Add user_id
       });
 
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Jemaat created successfully'],
+        message: {
+          id: ['Jemaat berhasil dibuat'],
+          en: ['Congregation created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -268,16 +302,24 @@ export const JemaatController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Permintaan tidak valid'],
+            en: ['Invalid request'],
+          },
         });
 
-      const jemaat = await Jemaat.findOne({ where: { id } });
+      const jemaat = await Jemaat.findOne({
+        where: { id, user_id: req.user?.id },
+      });
 
       if (!jemaat) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Jemaat not found'],
+          message: {
+            id: ['Jemaat tidak ditemukan'],
+            en: ['Congregation not found'],
+          },
         });
       }
 
@@ -286,13 +328,91 @@ export const JemaatController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Jemaat deleted successfully'],
+        message: {
+          id: ['Jemaat berhasil dihapus'],
+          en: ['Congregation deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
+        error: err,
+      });
+    }
+  },
+  async getChildren(req: Request, res: Response) {
+    try {
+      const { id } = req.query;
+
+      const rules = {
+        id: 'required|numeric',
+      };
+
+      const validation = new Validator({ id }, rules);
+      if (validation.fails())
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Permintaan tidak valid'],
+            en: ['Invalid request'],
+          },
+        });
+
+      // Check if parent jemaat exists and belongs to current user
+      const parentJemaat = await Jemaat.findOne({
+        where: { id: Number(id), user_id: req.user?.id },
+      });
+
+      if (!parentJemaat) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Orang tua jemaat tidak ditemukan'],
+            en: ['Parent Congregation not found'],
+          },
+        });
+      }
+
+      // Get all children (mom_id or dad_id equals to parent id)
+      const children = await Jemaat.findAll({
+        where: {
+          [Op.or]: [{ mom_id: Number(id) }, { dad_id: Number(id) }],
+          user_id: req.user?.id, // Ensure children belong to same user
+        },
+        attributes: [
+          ...Object.keys(Jemaat.rawAttributes),
+          [
+            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            'age',
+          ],
+        ],
+        order: [['birth_date', 'ASC']],
+      });
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        message: {
+          id: ['Data Anak berhasil diambil'],
+          en: ['Children retrieved successfully'],
+        },
+        data: children,
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -304,7 +424,10 @@ export const JemaatController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Date is required'],
+          message: {
+            id: ['Tanggal diperlukan'],
+            en: ['Date is required'],
+          },
         });
       }
 
@@ -313,17 +436,28 @@ export const JemaatController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Invalid date format'],
+          message: {
+            id: ['Format tanggal tidak valid'],
+            en: ['Invalid date format'],
+          },
         });
       }
 
       const month = parsedDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
 
       const jemaats = await Jemaat.findAll({
-        where: sequelize.where(
-          sequelize.fn('EXTRACT', sequelize.literal('MONTH FROM birth_date')),
-          month,
-        ),
+        where: {
+          [Op.and]: [
+            sequelize.where(
+              sequelize.fn(
+                'EXTRACT',
+                sequelize.literal('MONTH FROM birth_date'),
+              ),
+              month,
+            ),
+            { user_id: req.user?.id },
+          ],
+        },
         attributes: [
           ...Object.keys(Jemaat.rawAttributes),
           [
@@ -343,7 +477,10 @@ export const JemaatController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }

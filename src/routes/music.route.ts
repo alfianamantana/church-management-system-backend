@@ -1,31 +1,45 @@
 import { Router } from 'express';
 import { MusicController } from '../controllers/music.controller';
+import auth_user from '../middlewares/auth_user';
 
 export const MusicRoutes = (router: Router): void => {
   // Member routes
-  router.get('/members', MusicController.getMembers);
-  router.post('/members', MusicController.createMember);
-  router.put('/members', MusicController.updateMember);
-  router.delete('/members', MusicController.deleteMember);
+  router.get('/members', auth_user, MusicController.getMembers);
+  router.post('/members', auth_user, MusicController.createMember);
+  router.put('/members', auth_user, MusicController.updateMember);
+  router.delete('/members', auth_user, MusicController.deleteMember);
 
   // Role routes
-  router.get('/roles', MusicController.getRoles);
-  router.post('/roles', MusicController.createRole);
-  router.put('/roles', MusicController.updateRole);
-  router.delete('/roles', MusicController.deleteRole);
+  router.get('/roles', auth_user, MusicController.getRoles);
+  router.post('/roles', auth_user, MusicController.createRole);
+  router.put('/roles', auth_user, MusicController.updateRole);
+  router.delete('/roles', auth_user, MusicController.deleteRole);
 
   // Schedule routes
-  router.get('/schedules', MusicController.getSchedules);
-  router.post('/schedules', MusicController.createSchedule);
-  router.put('/schedules', MusicController.updateSchedule);
-  router.delete('/schedules', MusicController.deleteSchedule);
+  router.get('/schedules', auth_user, MusicController.getSchedules);
+  router.post('/schedules', auth_user, MusicController.createSchedule);
+  router.put('/schedules', auth_user, MusicController.updateSchedule);
+  router.delete('/schedules', auth_user, MusicController.deleteSchedule);
 
   // ServiceAssignment routes
-  router.get('/service-assignments', MusicController.getServiceAssignments);
-  router.post('/service-assignments', MusicController.createServiceAssignment);
-  router.put('/service-assignments', MusicController.updateServiceAssignment);
+  router.get(
+    '/service-assignments',
+    auth_user,
+    MusicController.getServiceAssignments,
+  );
+  router.post(
+    '/service-assignments',
+    auth_user,
+    MusicController.createServiceAssignment,
+  );
+  router.put(
+    '/service-assignments',
+    auth_user,
+    MusicController.updateServiceAssignment,
+  );
   router.delete(
     '/service-assignments',
+    auth_user,
     MusicController.deleteServiceAssignment,
   );
 };

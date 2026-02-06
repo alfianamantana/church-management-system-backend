@@ -32,7 +32,10 @@ export const UserController = {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['User not found'],
+          message: {
+            id: ['Pengguna tidak ditemukan'],
+            en: ['User not found'],
+          },
         });
       }
 
@@ -41,7 +44,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Old password is incorrect'],
+          message: {
+            id: ['Kata sandi lama salah'],
+            en: ['Old password is incorrect'],
+          },
         });
       }
 
@@ -51,13 +57,19 @@ export const UserController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Password changed successfully'],
+        message: {
+          id: ['Kata sandi berhasil diubah'],
+          en: ['Password changed successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
       });
     }
   },
@@ -92,7 +104,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Email already exists'],
+          message: {
+            id: ['Email sudah ada'],
+            en: ['Email already exists'],
+          },
         });
       }
 
@@ -113,14 +128,16 @@ export const UserController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Server error'],
+        message: {
+          id: ['Kesalahan server'],
+          en: ['Server error'],
+        },
       });
     }
   },
   async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
-
       const rules = { email: 'required|email', password: 'required|string' };
       const validation = new Validator({ email, password }, rules);
       if (validation.fails())
@@ -136,8 +153,26 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Invalid credentials'],
+          message: {
+            id: ['Kredensial tidak valid'],
+            en: ['Invalid credentials'],
+          },
         });
+
+      // Check if subscription has expired
+      if (
+        userInstance.subscribe_until &&
+        new Date() > userInstance.subscribe_until
+      ) {
+        return res.json({
+          code: 403,
+          status: 'error',
+          message: {
+            id: ['Langganan kedaluwarsa'],
+            en: ['Subscription expired'],
+          },
+        });
+      }
 
       const match = await bcrypt.compare(password, userInstance.password);
 
@@ -145,7 +180,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: ['Invalid credentials'],
+          message: {
+            id: ['Kredensial tidak valid'],
+            en: ['Invalid credentials'],
+          },
         });
 
       const token = generateToken(25);
@@ -154,6 +192,7 @@ export const UserController = {
       const existingInstance = await Auth.findOne({
         where: { user_id: userInstance.id },
       });
+
       if (existingInstance) {
         await existingInstance.update({ token, valid_until });
       } else {
@@ -165,7 +204,10 @@ export const UserController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Login successful'],
+        message: {
+          id: ['Login berhasil'],
+          en: ['Login successful'],
+        },
         token: token,
         data: userData,
       });
@@ -173,7 +215,10 @@ export const UserController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
       });
     }
   },

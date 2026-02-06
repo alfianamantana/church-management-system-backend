@@ -5,10 +5,10 @@ import {
   updateAsset,
   deleteAsset,
 } from '../controllers/asset.controller';
-
+import auth_user from '../middlewares/auth_user';
 export const AssetRoutes = (router: Router) => {
-  router.get('/', getAssets);
-  router.post('/', createAsset);
-  router.put('/', updateAsset);
-  router.delete('/', deleteAsset);
+  router.get('/', auth_user, getAssets);
+  router.post('/', auth_user, createAsset);
+  router.put('/', auth_user, updateAsset);
+  router.delete('/', auth_user, deleteAsset);
 };

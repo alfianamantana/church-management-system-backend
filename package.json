@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only index.ts",
+    "dev": "nodemon --exec ts-node index.ts",
     "build": "npx tsc",
     "serve": "node ./dist/index.js",
     "seed": "ts-node ./src/seeder.ts"

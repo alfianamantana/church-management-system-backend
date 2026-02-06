@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
+console.log('Environment loaded, starting application...');
 import './config/db.config';
+console.log('Database config loaded...');
 import 'reflect-metadata';
 import express, { Express } from 'express';
 import cors from 'cors';
@@ -59,11 +61,13 @@ app.use('/assets', assetRouter);
 
 async function main(): Promise<void> {
   try {
+    console.log('Starting server...');
     app.listen(PORT, (): void => {
       console.log(`⚡️ [SERVER]: Server running at localhost:${PORT}`);
+      console.log('Server started successfully!');
     });
   } catch (err: any) {
-    console.error(err);
+    console.error('Error starting server:', err);
     process.exit(1);
   }
 }

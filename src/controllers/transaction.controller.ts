@@ -12,9 +12,12 @@ export const TransactionController = {
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
-      let whereClause = {};
+      let whereClause: any = {
+        user_id: req.user?.id,
+      };
       if (q) {
         whereClause = {
+          ...whereClause,
           [Op.or]: [
             { '$category.name$': { [Op.iLike]: `%${q}%` } },
             { note: { [Op.iLike]: `%${q}%` } },
@@ -73,7 +76,9 @@ export const TransactionController = {
         });
 
       // Check if category exists
-      const category = await Category.findOne({ where: { id: category_id } });
+      const category = await Category.findOne({
+        where: { id: category_id, user_id: req.user?.id },
+      });
       if (!category) {
         return res.json({
           code: 404,
@@ -82,7 +87,13 @@ export const TransactionController = {
         });
       }
 
-      await Transaction.create({ date, category_id, amount, note });
+      await Transaction.create({
+        user_id: req.user?.id,
+        date,
+        category_id,
+        amount,
+        note,
+      });
 
       return res.json({
         code: 201,
@@ -115,7 +126,7 @@ export const TransactionController = {
         });
 
       const transaction = await Transaction.findOne({
-        where: { id: Number(id) },
+        where: { id: Number(id), user_id: req.user?.id },
       });
       if (!transaction) {
         return res.json({
@@ -127,7 +138,9 @@ export const TransactionController = {
 
       if (date) transaction.date = date;
       if (category_id) {
-        const category = await Category.findOne({ where: { id: category_id } });
+        const category = await Category.findOne({
+          where: { id: category_id, user_id: req.user?.id },
+        });
         if (!category) {
           return res.json({
             code: 404,
@@ -173,7 +186,7 @@ export const TransactionController = {
         });
 
       const transaction = await Transaction.findOne({
-        where: { id: Number(id) },
+        where: { id: Number(id), user_id: req.user?.id },
       });
       if (!transaction) {
         return res.json({

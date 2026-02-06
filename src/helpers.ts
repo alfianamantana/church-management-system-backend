@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 
 export function generateToken(length = 25) {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/`~';
+  const charset =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/`~';
   const charsLen = charset.length;
   let token = '';
   // Use crypto.randomInt for secure random indices

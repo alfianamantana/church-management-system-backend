@@ -14,7 +14,9 @@ export const EventController = {
       const start_date = start ? new Date(String(start)) : null;
       const end_date = end ? new Date(String(end)) : null;
 
-      let whereClause = {};
+      let whereClause: any = {
+        user_id: req.user?.id,
+      };
 
       if (q) {
         whereClause = {
@@ -32,7 +34,7 @@ export const EventController = {
       }
 
       if (id) {
-        whereClause = { id: Number(id) };
+        whereClause = { ...whereClause, id: Number(id) };
       }
 
       const { count, rows } = await Event.findAndCountAll({
@@ -45,6 +47,10 @@ export const EventController = {
       return res.json({
         code: 200,
         status: 'success',
+        message: {
+          id: ['Acara berhasil diambil'],
+          en: ['Events retrieved successfully'],
+        },
         data: rows,
         pagination: {
           total: count,
@@ -78,13 +84,15 @@ export const EventController = {
 
       const { title, start, end, description } = req.body;
 
-      const event = await Event.findOne({ where: { id } });
+      const event = await Event.findOne({
+        where: { id, user_id: req.user?.id },
+      });
 
       if (!event) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Event not found'],
+          message: { id: ['Acara tidak ditemukan'], en: ['Event not found'] },
         });
       }
 
@@ -98,14 +106,20 @@ export const EventController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Event updated successfully'],
+        message: {
+          id: ['Acara berhasil diperbarui'],
+          en: ['Event updated successfully'],
+        },
         data: event,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -129,7 +143,7 @@ export const EventController = {
         });
 
       await Event.create({
-        user_id: 1, // Placeholder user_id
+        user_id: req.user?.id,
         title,
         start,
         end,
@@ -139,13 +153,19 @@ export const EventController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Event created successfully'],
+        message: {
+          id: ['Acara berhasil dibuat'],
+          en: ['Event created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -166,13 +186,15 @@ export const EventController = {
           message: validation.errors.all(),
         });
 
-      const event = await Event.findOne({ where: { id } });
+      const event = await Event.findOne({
+        where: { id, user_id: req.user?.id },
+      });
 
       if (!event) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Event not found'],
+          message: { id: ['Acara tidak ditemukan'], en: ['Event not found'] },
         });
       }
 
@@ -181,13 +203,19 @@ export const EventController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Event deleted successfully'],
+        message: {
+          id: ['Acara berhasil dihapus'],
+          en: ['Event deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Terjadi kesalahan pada server'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
