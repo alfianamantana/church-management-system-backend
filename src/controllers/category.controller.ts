@@ -19,10 +19,12 @@ export const getCategories = async (req: Request, res: Response) => {
   } catch (error) {
     res.json({
       code: 500,
+      status: 'error',
       message: {
         id: ['Terjadi kesalahan pada server'],
         en: ['Internal server error'],
       },
+      error: error,
     });
   }
 };

@@ -2,17 +2,23 @@ import { Request, Response } from 'express';
 
 export const IndexController = {
   index(req: Request, res: Response): Response {
-    return res.send({
+    return res.json({
       code: 200,
       status: 'success',
-      message: ['API is running'],
+      message: {
+        id: ['API sedang berjalan'],
+        en: ['API is running'],
+      },
     });
   },
   fallback(req: Request, res: Response): Response {
-    return res.send({
+    return res.json({
       status: 'error',
       code: 404,
-      message: ['route not found'],
+      message: {
+        id: ['rute tidak ditemukan'],
+        en: ['route not found'],
+      },
     });
   },
 };

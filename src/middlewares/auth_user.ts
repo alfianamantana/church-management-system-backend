@@ -53,16 +53,16 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
       });
     }
     req.user = user;
-    console.log('nyampe');
 
     next();
   } catch (error) {
-    console.log(error, '/');
-
     return res.json({
       code: 500,
       status: 'error',
-      message: 'Internal server error',
+      message: {
+        id: ['Kesalahan server internal'],
+        en: ['Internal server error'],
+      },
     });
   }
 };

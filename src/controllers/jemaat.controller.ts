@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Jemaat } from '../model';
+import { Jemaat, User } from '../model';
 import Validator from 'validatorjs';
 import { Op, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
@@ -225,6 +225,7 @@ export const JemaatController = {
     }
   },
   async createJemaat(req: Request, res: Response) {
+    let transaction;
     try {
       const {
         name,
@@ -253,21 +254,36 @@ export const JemaatController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Permintaan tidak valid'],
+            en: ['Invalid request'],
+          },
         });
 
-      await Jemaat.create({
-        name,
-        birth_date,
-        born_place,
-        baptism_date: baptism_date || null,
-        is_married,
-        mom_id: mom_id || null,
-        dad_id: dad_id || null,
-        phone_number: phone_number || null,
-        gender: gender || 'male',
-        user_id: req.user?.id, // Add user_id
+      transaction = await sequelize.transaction();
+      await Jemaat.create(
+        {
+          name,
+          birth_date,
+          born_place,
+          baptism_date: baptism_date || null,
+          is_married,
+          mom_id: mom_id || null,
+          dad_id: dad_id || null,
+          phone_number: phone_number || null,
+          gender: gender || 'male',
+          user_id: req.user?.id, // Add user_id
+        },
+        { transaction },
+      );
+
+      // Increment total_jemaat_created for the user
+      await User.increment('total_jemaat_created', {
+        where: { id: req.user?.id },
+        transaction,
       });
+
+      await transaction.commit();
 
       return res.json({
         code: 201,
@@ -278,6 +294,7 @@ export const JemaatController = {
         },
       });
     } catch (err) {
+      if (transaction) await transaction.rollback();
       return res.json({
         code: 500,
         status: 'error',
@@ -290,7 +307,9 @@ export const JemaatController = {
     }
   },
   async deleteJemaat(req: Request, res: Response) {
+    let transaction;
     try {
+      const { user } = req;
       const { id } = req.query;
 
       const rules = {
@@ -309,7 +328,7 @@ export const JemaatController = {
         });
 
       const jemaat = await Jemaat.findOne({
-        where: { id, user_id: req.user?.id },
+        where: { id, user_id: user?.id },
       });
 
       if (!jemaat) {
@@ -322,8 +341,13 @@ export const JemaatController = {
           },
         });
       }
+      transaction = await sequelize.transaction();
+      await jemaat.destroy({ transaction });
 
-      await jemaat.destroy();
+      await User.decrement('total_jemaat_created', {
+        where: { id: user?.id },
+        transaction,
+      });
 
       return res.json({
         code: 200,
@@ -334,6 +358,7 @@ export const JemaatController = {
         },
       });
     } catch (err) {
+      if (transaction) await transaction.rollback();
       return res.json({
         code: 500,
         status: 'error',

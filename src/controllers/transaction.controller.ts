@@ -46,7 +46,10 @@ export const TransactionController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -98,13 +101,19 @@ export const TransactionController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Transaction created successfully'],
+        message: {
+          id: ['Transaksi berhasil dibuat'],
+          en: ['Transaction created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -158,14 +167,20 @@ export const TransactionController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Transaction updated successfully'],
+        message: {
+          id: ['Transaksi berhasil diperbarui'],
+          en: ['Transaction updated successfully'],
+        },
         data: transaction,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -201,13 +216,19 @@ export const TransactionController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Transaction deleted successfully'],
+        message: {
+          id: ['Transaksi berhasil dihapus'],
+          en: ['Transaction deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }

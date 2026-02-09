@@ -81,7 +81,15 @@ export class User extends Model {
     defaultValue: 'basic',
     field: 'subscribe_type',
   })
-  subscribe_type!: 'basic' | 'full';
+  subscribe_type!: 'bibit' | 'bertumbuh' | 'full';
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_jemaat_created',
+  })
+  total_jemaat_created!: number;
 
   @HasMany(() => Event)
   events?: Event[];
@@ -106,6 +114,9 @@ export class User extends Model {
 
   @HasMany(() => Category)
   categories?: Category[];
+
+  @HasMany(() => Member)
+  members?: Member[];
 }
 
 @Table({
@@ -374,6 +385,17 @@ export class Member extends Model {
     allowNull: false,
   })
   id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
 
   @Column({
     type: DataType.STRING(255),

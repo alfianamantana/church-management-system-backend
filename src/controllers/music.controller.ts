@@ -44,7 +44,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -72,13 +75,19 @@ export const MusicController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Member created successfully'],
+        message: {
+          id: ['Anggota berhasil dibuat'],
+          en: ['Member created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -116,14 +125,20 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Member updated successfully'],
+        message: {
+          id: ['Anggota berhasil diperbarui'],
+          en: ['Member updated successfully'],
+        },
         data: member,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -158,13 +173,19 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Member deleted successfully'],
+        message: {
+          id: ['Anggota berhasil dihapus'],
+          en: ['Member deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -202,7 +223,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -226,13 +250,19 @@ export const MusicController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Role created successfully'],
+        message: {
+          id: ['Peran berhasil dibuat'],
+          en: ['Role created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -269,14 +299,20 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Role updated successfully'],
+        message: {
+          id: ['Peran berhasil diperbarui'],
+          en: ['Role updated successfully'],
+        },
         data: role,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -311,13 +347,19 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Role deleted successfully'],
+        message: {
+          id: ['Peran berhasil dihapus'],
+          en: ['Role deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -380,7 +422,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -430,7 +475,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -490,7 +538,10 @@ export const MusicController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Schedules created successfully'],
+        message: {
+          id: ['Jadwal berhasil dibuat'],
+          en: ['Schedules created successfully'],
+        },
       });
     } catch (err) {
       if (transaction) {
@@ -499,7 +550,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -581,7 +635,10 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Schedules updated successfully'],
+        message: {
+          id: ['Jadwal berhasil diperbarui'],
+          en: ['Schedules updated successfully'],
+        },
       });
     } catch (err) {
       if (transaction) {
@@ -590,7 +647,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -625,13 +685,19 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Schedule deleted successfully'],
+        message: {
+          id: ['Jadwal berhasil dihapus'],
+          en: ['Schedule deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -667,7 +733,10 @@ export const MusicController = {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -769,13 +838,19 @@ export const MusicController = {
       return res.json({
         code: 201,
         status: 'success',
-        message: ['Service assignment created successfully'],
+        message: {
+          id: ['Penugasan layanan berhasil dibuat'],
+          en: ['Service assignment created successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -888,14 +963,20 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Service assignment updated successfully'],
+        message: {
+          id: ['Penugasan layanan berhasil diperbarui'],
+          en: ['Service assignment updated successfully'],
+        },
         data: assignment,
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
@@ -930,13 +1011,19 @@ export const MusicController = {
       return res.json({
         code: 200,
         status: 'success',
-        message: ['Service assignment deleted successfully'],
+        message: {
+          id: ['Penugasan layanan berhasil dihapus'],
+          en: ['Service assignment deleted successfully'],
+        },
       });
     } catch (err) {
       return res.json({
         code: 500,
         status: 'error',
-        message: ['Internal server error'],
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
         error: err,
       });
     }
