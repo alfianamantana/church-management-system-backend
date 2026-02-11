@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Transaction, Category } from '../model';
+import { Transaction, Category, Church } from '../model';
 import Validator from 'validatorjs';
 import { Op } from 'sequelize';
 
@@ -12,8 +12,21 @@ export const TransactionController = {
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       let whereClause: any = {
-        user_id: req.user?.id,
+        church_id: church.id,
       };
       if (q) {
         whereClause = {
@@ -78,9 +91,22 @@ export const TransactionController = {
           message: validation.errors.all(),
         });
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       // Check if category exists
       const category = await Category.findOne({
-        where: { id: category_id, user_id: req.user?.id },
+        where: { id: category_id, church_id: church.id },
       });
       if (!category) {
         return res.json({
@@ -91,7 +117,7 @@ export const TransactionController = {
       }
 
       await Transaction.create({
-        user_id: req.user?.id,
+        church_id: church.id,
         date,
         category_id,
         amount,
@@ -134,8 +160,21 @@ export const TransactionController = {
           message: validation.errors.all(),
         });
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const transaction = await Transaction.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church.id },
       });
       if (!transaction) {
         return res.json({
@@ -148,7 +187,7 @@ export const TransactionController = {
       if (date) transaction.date = date;
       if (category_id) {
         const category = await Category.findOne({
-          where: { id: category_id, user_id: req.user?.id },
+          where: { id: category_id, church_id: church.id },
         });
         if (!category) {
           return res.json({
@@ -200,8 +239,21 @@ export const TransactionController = {
           message: validation.errors.all(),
         });
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const transaction = await Transaction.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church.id },
       });
       if (!transaction) {
         return res.json({

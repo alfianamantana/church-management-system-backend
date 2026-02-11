@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Jemaat, User } from '../model';
+import { Jemaat, User, Church } from '../model';
 import Validator from 'validatorjs';
 import { Op, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
@@ -31,7 +31,20 @@ export const JemaatController = {
       const mom = req.query.dad === 'true' ? true : false;
       const children = req.query.children === 'true' ? true : false;
 
-      let whereClause: any = { user_id: req.user?.id }; // Add user filter
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
+      let whereClause: any = { church_id: church.id }; // Add church filter
       let includeClause: any[] = [];
 
       if (gender) {
@@ -173,8 +186,21 @@ export const JemaatController = {
         gender,
       } = req.body;
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const jemaat = await Jemaat.findOne({
-        where: { id, user_id: req.user?.id },
+        where: { id, church_id: church.id },
       });
 
       if (!jemaat) {
@@ -227,6 +253,19 @@ export const JemaatController = {
   async createJemaat(req: Request, res: Response) {
     let transaction;
     try {
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const {
         name,
         birth_date,
@@ -272,7 +311,7 @@ export const JemaatController = {
           dad_id: dad_id || null,
           phone_number: phone_number || null,
           gender: gender || 'male',
-          user_id: req.user?.id, // Add user_id
+          church_id: church.id, // Add church_id
         },
         { transaction },
       );
@@ -327,8 +366,21 @@ export const JemaatController = {
           },
         });
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const jemaat = await Jemaat.findOne({
-        where: { id, user_id: user?.id },
+        where: { id, church_id: church.id },
       });
 
       if (!jemaat) {
@@ -389,9 +441,22 @@ export const JemaatController = {
           },
         });
 
-      // Check if parent jemaat exists and belongs to current user
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
+      // Check if parent jemaat exists and belongs to current church
       const parentJemaat = await Jemaat.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church.id },
       });
 
       if (!parentJemaat) {
@@ -470,6 +535,19 @@ export const JemaatController = {
 
       const month = parsedDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const jemaats = await Jemaat.findAll({
         where: {
           [Op.and]: [
@@ -480,7 +558,7 @@ export const JemaatController = {
               ),
               month,
             ),
-            { user_id: req.user?.id },
+            { church_id: church.id },
           ],
         },
         attributes: [

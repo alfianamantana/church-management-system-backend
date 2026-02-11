@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Family, Jemaat } from '../model';
+import { Family, Jemaat, Church } from '../model';
 import Validator from 'validatorjs';
 import { Op, where, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
@@ -35,7 +35,20 @@ export const FamilyController = {
         });
       }
 
-      let whereClause: any = { user_id: req.user?.id }; // Add user filter
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
+      let whereClause: any = { church_id: church.id }; // Add church filter
 
       if (id) {
         whereClause = { ...whereClause, id: Number(id) };
@@ -101,13 +114,26 @@ export const FamilyController = {
         });
       }
 
-      const family = await Family.create({ name, user_id: req.user?.id });
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
+      const family = await Family.create({ name, church_id: church.id });
 
       // Update jemaat family_id
       if (jemaat_ids && jemaat_ids.length > 0) {
         await Jemaat.update(
           { family_id: family.id },
-          { where: { id: jemaat_ids, user_id: req.user?.id } }, // Add user filter
+          { where: { id: jemaat_ids, church_id: church.id } }, // Add church filter
         );
       }
 
@@ -156,8 +182,21 @@ export const FamilyController = {
         });
       }
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const family = await Family.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church.id },
       });
       if (!family) {
         return res.json({
@@ -175,7 +214,7 @@ export const FamilyController = {
       // Handle jemaat updates
       if (jemaat_ids !== undefined) {
         const currentJemaat = await Jemaat.findAll({
-          where: { family_id: family.id, user_id: req.user?.id }, // Add user filter
+          where: { family_id: family.id, church_id: church.id }, // Add church filter
         });
         const currentIds = currentJemaat.map((j) => j.id);
         const selectedIds = jemaat_ids || [];
@@ -186,14 +225,14 @@ export const FamilyController = {
         if (toAdd.length > 0) {
           await Jemaat.update(
             { family_id: family.id },
-            { where: { id: toAdd, user_id: req.user?.id } }, // Add user filter
+            { where: { id: toAdd, church_id: church.id } }, // Add church filter
           );
         }
 
         if (toRemove.length > 0) {
           await Jemaat.update(
             { family_id: null },
-            { where: { id: toRemove, user_id: req.user?.id } },
+            { where: { id: toRemove, church_id: church.id } },
           ); // Add user filter
         }
       }
@@ -225,8 +264,21 @@ export const FamilyController = {
     try {
       const id = req.query.id as string;
 
+      // Get church for the user
+      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
+
       const family = await Family.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church.id },
       });
       if (!family) {
         return res.json({

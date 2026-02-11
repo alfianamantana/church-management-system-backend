@@ -12,6 +12,9 @@ import {
   Category,
   Family,
   Asset,
+  Church,
+  PriorityNeed,
+  UserPriorityNeed,
 } from '../src/model';
 
 const sequelize = new Sequelize({
@@ -55,6 +58,9 @@ const sequelize = new Sequelize({
     Asset,
     Event,
     Auth,
+    Church,
+    PriorityNeed,
+    UserPriorityNeed,
   ],
 });
 

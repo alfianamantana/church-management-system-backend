@@ -6,6 +6,7 @@ import {
   ForeignKey,
   BelongsTo,
   HasMany,
+  BelongsToMany,
 } from 'sequelize-typescript';
 
 @Table({
@@ -91,42 +92,21 @@ export class User extends Model {
   })
   total_jemaat_created!: number;
 
-  @HasMany(() => Event)
-  events?: Event[];
+  @HasMany(() => Church)
+  churches?: Church[];
 
-  @HasMany(() => Schedule)
-  schedules?: Schedule[];
-
-  @HasMany(() => Transaction)
-  transactions?: Transaction[];
-
-  @HasMany(() => Asset)
-  assets?: Asset[];
-
-  @HasMany(() => Role)
-  roles?: Role[];
-
-  @HasMany(() => Family)
-  families?: Family[];
-
-  @HasMany(() => Jemaat)
-  jemaats?: Jemaat[];
-
-  @HasMany(() => Category)
-  categories?: Category[];
-
-  @HasMany(() => Member)
-  members?: Member[];
+  @BelongsToMany(() => PriorityNeed, { through: () => UserPriorityNeed })
+  priorityNeeds?: PriorityNeed[];
 }
 
 @Table({
-  tableName: 'families',
+  tableName: 'churches',
   timestamps: true,
   underscored: true,
   charset: 'utf8mb4',
   collate: 'utf8mb4_general_ci',
 })
-export class Family extends Model {
+export class Church extends Model {
   @Column({
     type: DataType.INTEGER,
     primaryKey: true,
@@ -146,6 +126,98 @@ export class Family extends Model {
 
   @BelongsTo(() => User)
   user!: User;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    unique: true,
+    field: 'email',
+  })
+  email!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'city',
+  })
+  city!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'country',
+  })
+  country!: string;
+
+  @Column({
+    type: DataType.STRING(30),
+    allowNull: false,
+    field: 'phone_number',
+  })
+  phone_number!: string;
+
+  @HasMany(() => Event)
+  events?: Event[];
+
+  @HasMany(() => Family)
+  families?: Family[];
+
+  @HasMany(() => Jemaat)
+  jemaats?: Jemaat[];
+
+  @HasMany(() => Schedule)
+  schedules?: Schedule[];
+
+  @HasMany(() => Member)
+  members?: Member[];
+
+  @HasMany(() => Role)
+  roles?: Role[];
+
+  @HasMany(() => Category)
+  categories?: Category[];
+
+  @HasMany(() => Transaction)
+  transactions?: Transaction[];
+
+  @HasMany(() => Asset)
+  assets?: Asset[];
+}
+
+@Table({
+  tableName: 'families',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class Family extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: number;
+
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -196,16 +268,16 @@ export class Jemaat extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -329,16 +401,16 @@ export class Event extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -386,16 +458,16 @@ export class Member extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -432,16 +504,16 @@ export class Role extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -471,16 +543,16 @@ export class Schedule extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -569,16 +641,16 @@ export class Category extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -615,16 +687,16 @@ export class Transaction extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.DATEONLY,
@@ -677,16 +749,16 @@ export class Asset extends Model {
   })
   id!: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => Church)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    field: 'user_id',
+    field: 'church_id',
   })
-  user_id!: number;
+  church_id!: number;
 
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -744,4 +816,79 @@ export class Asset extends Model {
     comment: 'Catatan tambahan untuk asset',
   })
   notes?: string;
+}
+
+@Table({
+  tableName: 'priority_needs',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class PriorityNeed extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    field: 'description',
+  })
+  description?: string;
+
+  @BelongsToMany(() => User, { through: () => UserPriorityNeed })
+  users?: User[];
+}
+
+@Table({
+  tableName: 'user_priority_needs',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class UserPriorityNeed extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
+  @ForeignKey(() => PriorityNeed)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'priority_need_id',
+  })
+  priority_need_id!: number;
+
+  @BelongsTo(() => PriorityNeed)
+  priorityNeed!: PriorityNeed;
 }

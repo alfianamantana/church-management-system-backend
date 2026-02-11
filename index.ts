@@ -15,6 +15,8 @@ import { CategoryRoutes } from './src/routes/category.route';
 import { FamilyRoutes } from './src/routes/family.routes';
 import { DashboardRoutes } from './src/routes/dashboard.route';
 import { AssetRoutes } from './src/routes/asset.route';
+import { ChurchRoutes } from './src/routes/church.route';
+import { PriorityNeedRoutes } from './src/routes/priority_need.route';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
@@ -58,6 +60,14 @@ app.use('/dashboard', dashboardRouter);
 const assetRouter = express.Router();
 AssetRoutes(assetRouter);
 app.use('/assets', assetRouter);
+
+const churchRouter = express.Router();
+ChurchRoutes(churchRouter);
+app.use('/churches', churchRouter);
+
+const priorityNeedRouter = express.Router();
+PriorityNeedRoutes(priorityNeedRouter);
+app.use('/priority-needs', priorityNeedRouter);
 
 async function main(): Promise<void> {
   try {

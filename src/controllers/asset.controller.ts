@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Asset } from '../model';
+import { Asset, Church } from '../model';
 import { Op } from 'sequelize';
 
 export const getAssets = async (req: Request, res: Response) => {
@@ -9,8 +9,21 @@ export const getAssets = async (req: Request, res: Response) => {
     limit = Number(limit) || 10;
     const offset = (page - 1) * limit;
 
+    // Get church for the user
+    const church = await Church.findOne({ where: { user_id: req.user?.id } });
+    if (!church) {
+      return res.json({
+        code: 404,
+        status: 'error',
+        message: {
+          id: ['Gereja tidak ditemukan'],
+          en: ['Church not found'],
+        },
+      });
+    }
+
     let whereClause: any = {
-      user_id: req.user?.id,
+      church_id: church.id,
     };
     if (q) {
       whereClause = {
@@ -74,8 +87,21 @@ export const createAsset = async (req: Request, res: Response) => {
       notes,
     } = req.body;
 
+    // Get church for the user
+    const church = await Church.findOne({ where: { user_id: req.user?.id } });
+    if (!church) {
+      return res.json({
+        code: 404,
+        status: 'error',
+        message: {
+          id: ['Gereja tidak ditemukan'],
+          en: ['Church not found'],
+        },
+      });
+    }
+
     const asset = await Asset.create({
-      user_id: req.user?.id,
+      church_id: church.id,
       name,
       description,
       value,
@@ -120,9 +146,22 @@ export const updateAsset = async (req: Request, res: Response) => {
       notes,
     } = req.body;
 
+    // Get church for the user
+    const church = await Church.findOne({ where: { user_id: req.user?.id } });
+    if (!church) {
+      return res.json({
+        code: 404,
+        status: 'error',
+        message: {
+          id: ['Gereja tidak ditemukan'],
+          en: ['Church not found'],
+        },
+      });
+    }
+
     const asset = await Asset.findByPk(id);
 
-    if (!asset || asset.user_id !== req.user?.id) {
+    if (!asset || asset.church_id !== church.id) {
       return res.json({
         code: 404,
         message: {
@@ -165,9 +204,23 @@ export const updateAsset = async (req: Request, res: Response) => {
 export const deleteAsset = async (req: Request, res: Response) => {
   try {
     const id = Number(req.query.id);
+
+    // Get church for the user
+    const church = await Church.findOne({ where: { user_id: req.user?.id } });
+    if (!church) {
+      return res.json({
+        code: 404,
+        status: 'error',
+        message: {
+          id: ['Gereja tidak ditemukan'],
+          en: ['Church not found'],
+        },
+      });
+    }
+
     const asset = await Asset.findByPk(id);
 
-    if (!asset || asset.user_id !== req.user?.id) {
+    if (!asset || asset.church_id !== church.id) {
       return res.json({
         code: 404,
         message: {
