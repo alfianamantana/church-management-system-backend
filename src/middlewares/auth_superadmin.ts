@@ -4,7 +4,7 @@ import { User, Auth } from '../model';
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: User | null;
     }
   }
 }

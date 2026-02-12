@@ -15,6 +15,7 @@ import {
   Church,
   PriorityNeed,
   UserPriorityNeed,
+  RoleAccount,
 } from '../src/model';
 
 const sequelize = new Sequelize({
@@ -61,6 +62,7 @@ const sequelize = new Sequelize({
     Church,
     PriorityNeed,
     UserPriorityNeed,
+    RoleAccount,
   ],
 });
 

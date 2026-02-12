@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { User, Auth } from '../model';
+import { User, Auth, Church } from '../model';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: User | null;
+      church?: Church | null;
     }
   }
 }
@@ -13,11 +14,16 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.token as string;
     const authorization = req.headers.authorization as string;
+    const church = req.headers.church as string;
+
     if (!token) {
       return res.json({
         code: 401,
         status: 'error',
-        message: 'Unauthorized: No token provided',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
       });
     }
     const authRecord = await Auth.findOne({ where: { token } });
@@ -25,7 +31,10 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
       return res.json({
         code: 401,
         status: 'error',
-        message: 'Unauthorized: Invalid token',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
       });
     }
 
@@ -33,7 +42,10 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
       return res.json({
         code: 401,
         status: 'error',
-        message: 'Unauthorized: Token has expired',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
       });
     }
     const user = await User.findOne({ where: { id: authRecord.user_id } });
@@ -41,7 +53,10 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
       return res.json({
         code: 401,
         status: 'error',
-        message: 'Unauthorized: User not found',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
       });
     }
 
@@ -49,11 +64,39 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
       return res.json({
         code: 401,
         status: 'error',
-        message: 'Unauthorized: Invalid authorization key',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
       });
     }
-    req.user = user;
 
+    const finded_church = await Church.findOne({ where: { id: church } });
+
+    if (!finded_church) {
+      return res.json({
+        code: 401,
+        status: 'error',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
+      });
+    }
+
+    if (finded_church.user_id !== user.id) {
+      return res.json({
+        code: 401,
+        status: 'error',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorize'],
+        },
+      });
+    }
+
+    (req as Express.Request).church = finded_church;
+    (req as Express.Request).user = user;
     next();
   } catch (error) {
     return res.json({

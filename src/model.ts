@@ -92,11 +92,81 @@ export class User extends Model {
   })
   total_jemaat_created!: number;
 
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_trial_account',
+  })
+  is_trial_account!: boolean;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'is_main_account',
+  })
+  is_main_account!: boolean;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'is_verified',
+  })
+  is_verified!: boolean;
+
+  @Column({
+    type: DataType.STRING(6),
+    allowNull: true,
+    field: 'otp',
+  })
+  otp?: string;
+
   @HasMany(() => Church)
   churches?: Church[];
 
+  @HasMany(() => RoleAccount)
+  roleAccounts?: RoleAccount[];
+
   @BelongsToMany(() => PriorityNeed, { through: () => UserPriorityNeed })
   priorityNeeds?: PriorityNeed[];
+}
+
+@Table({
+  tableName: 'role_accounts',
+  timestamps: true,
+  underscored: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_general_ci',
+})
+export class RoleAccount extends Model {
+  @Column({
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    unique: true,
+    allowNull: false,
+  })
+  id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: number;
+
+  @BelongsTo(() => User)
+  user!: User;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
 }
 
 @Table({

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import '../config/db.config';
-import { User, Category, PriorityNeed, Church } from './model';
+import { User, Category, PriorityNeed, Church, RoleAccount } from './model';
 import bcrypt from 'bcrypt';
 
 async function seedSuperadmin() {
@@ -26,6 +26,9 @@ async function seedSuperadmin() {
     role: 'superadmin',
     subscribe_type: 'full',
     unique_key: 'alfianganteng',
+    is_trial_account: false,
+    is_main_account: true,
+    is_verified: true,
   });
   console.log('Superadmin seeded!');
 }
@@ -111,11 +114,67 @@ async function seedPriorityNeeds() {
   }
 }
 
+async function seedRoleAccounts() {
+  const churchPositions = [
+    'pastor',
+    'minister',
+    'preacher',
+    'senior_pastor',
+    'associate_pastor',
+    'youth_pastor',
+    'bishop',
+    'priest',
+    'deacon',
+    'deaconess',
+    'elder',
+    'warden',
+    'trustee',
+    'church_secretary',
+    'treasurer',
+    'worship_leader',
+    'choir_director',
+    'music_director',
+    'usher',
+    'greeter',
+    'sunday_school_teacher',
+    'pope',
+    'cardinal',
+    'archbishop',
+    'vicar',
+    'altar_server',
+  ];
+
+  // Get superadmin user
+  const superadmin = await User.findOne({
+    where: { role: 'superadmin' },
+  });
+  if (!superadmin) {
+    console.log('Superadmin not found, skipping role account seeding.');
+    return;
+  }
+
+  for (const position of churchPositions) {
+    const existing = await RoleAccount.findOne({
+      where: { name: position, user_id: superadmin.id },
+    });
+    if (!existing) {
+      await RoleAccount.create({
+        name: position,
+        user_id: superadmin.id,
+      });
+      console.log(`Role account "${position}" seeded!`);
+    } else {
+      console.log(`Role account "${position}" already exists.`);
+    }
+  }
+}
+
 async function main() {
   try {
     await seedSuperadmin();
     await seedCategories();
     await seedPriorityNeeds();
+    await seedRoleAccounts();
     console.log('Seeding completed!');
   } catch (error) {
     console.error('Seeding failed:', error);

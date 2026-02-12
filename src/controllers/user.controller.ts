@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Validator from 'validatorjs';
-import { User, Auth } from '../model';
+import { User, Auth, PriorityNeed, UserPriorityNeed, Church } from '../model';
 import bcrypt from 'bcrypt';
 import { generateToken } from '../helpers';
 import { Op } from 'sequelize';
@@ -106,7 +106,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
 
       const user = await User.findOne({ where: { id: Number(id) } });
@@ -180,7 +183,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
 
       const user = await User.findOne({ where: { id: Number(id) } });
@@ -248,7 +254,10 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
       }
 
@@ -300,65 +309,69 @@ export const UserController = {
   },
   async createUser(req: Request, res: Response) {
     try {
-      const { name, email, password, phone_number, role, subscribe_type } =
-        req.body;
+      console.log(req.body, 'bodss');
 
-      const subscribe_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-      const unique_key = Math.random().toString(36).substring(2, 15);
-      const rules = {
-        name: 'required|string',
-        email: 'required|email',
-        password: 'required|string',
-        phone_number: 'required|string',
-        role: 'string|in:superadmin,user',
-        subscribe_type: 'required|string|in:bibit,bertumbuh,full',
-      };
+      // const { name, email, password, phone_number, role, subscribe_type } =
+      //   req.body;
 
-      const validation = new Validator(
-        { name, email, password, phone_number, role, subscribe_type },
-        rules,
-      );
-      if (validation.fails()) {
-        return res.json({
-          code: 400,
-          status: 'error',
-          message: validation.errors.all(),
-        });
-      }
+      // const subscribe_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      // const unique_key = Math.random().toString(36).substring(2, 15);
+      // const rules = {
+      //   name: 'required|string',
+      //   email: 'required|email',
+      //   password: 'required|string',
+      //   phone_number: 'required|string',
+      //   role: 'string|in:superadmin,user',
+      //   subscribe_type: 'required|string|in:bibit,bertumbuh,full',
+      // };
 
-      const existing = await User.findOne({ where: { email } });
-      if (existing) {
-        return res.json({
-          code: 400,
-          status: 'error',
-          message: {
-            id: ['Email sudah ada'],
-            en: ['Email already exists'],
-          },
-        });
-      }
+      // const validation = new Validator(
+      //   { name, email, password, phone_number, role, subscribe_type },
+      //   rules,
+      // );
+      // if (validation.fails()) {
+      //   return res.json({
+      //     code: 400,
+      //     status: 'error',
+      //     message: {
+      //   id: ['Validasi gagal'],
+      // en: ['Validation failed']}
+      //   });
+      // }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // const existing = await User.findOne({ where: { email } });
+      // if (existing) {
+      //   return res.json({
+      //     code: 400,
+      //     status: 'error',
+      //     message: {
+      //       id: ['Email sudah ada'],
+      //       en: ['Email already exists'],
+      //     },
+      //   });
+      // }
 
-      await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        phone_number,
-        subscribe_until,
-        role: role || undefined,
-        subscribe_type,
-        unique_key,
-      });
+      // const hashedPassword = await bcrypt.hash(password, 10);
 
-      return res.json({
-        code: 201,
-        status: 'success',
-        message: {
-          id: ['Pengguna berhasil dibuat'],
-          en: ['User created successfully'],
-        },
-      });
+      // await User.create({
+      //   name,
+      //   email,
+      //   password: hashedPassword,
+      //   phone_number,
+      //   subscribe_until,
+      //   role: role || undefined,
+      //   subscribe_type,
+      //   unique_key,
+      // });
+
+      // return res.json({
+      //   code: 201,
+      //   status: 'success',
+      //   message: {
+      //     id: ['Pengguna berhasil dibuat'],
+      //     en: ['User created successfully'],
+      //   },
+      // });
     } catch (err) {
       return res.json({
         code: 500,
@@ -379,10 +392,16 @@ export const UserController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
 
-      const userInstance = await User.findOne({ where: { email } });
+      const userInstance = await User.findOne({
+        where: { email },
+        include: [{ model: Church }],
+      });
 
       if (!userInstance)
         return res.json({
@@ -454,6 +473,274 @@ export const UserController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
+      });
+    }
+  },
+
+  async register(req: Request, res: Response) {
+    try {
+      const { name, email, password, phone_number, priority_needs } = req.body;
+
+      const rules = {
+        name: 'required|string|min:2|max:255',
+        email: 'required|email',
+        password: 'required|string|min:6',
+        phone_number: 'required|string|min:10|max:15',
+        priority_needs: 'array',
+        'priority_needs.*': 'numeric',
+      };
+
+      const validation = new Validator(
+        { name, email, password, phone_number, priority_needs },
+        rules,
+      );
+
+      if (validation.fails()) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
+        });
+      }
+
+      // Check if email already exists
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Email sudah terdaftar'],
+            en: ['Email already registered'],
+          },
+        });
+      }
+
+      // Validate priority needs if provided
+      if (priority_needs && priority_needs.length > 0) {
+        const validPriorityNeeds = await PriorityNeed.findAll({
+          where: { id: { [Op.in]: priority_needs } },
+        });
+
+        if (validPriorityNeeds.length !== priority_needs.length) {
+          return res.json({
+            code: 400,
+            status: 'error',
+            message: {
+              id: ['Beberapa kebutuhan prioritas tidak valid'],
+              en: ['Some priority needs are invalid'],
+            },
+          });
+        }
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Set default subscription (3 days trial)
+      const subscribe_until = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      const unique_key =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Create user
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        phone_number,
+        subscribe_until,
+        role: 'user',
+        subscribe_type: 'bibit', // Default to trial
+        unique_key,
+        is_trial_account: true,
+        is_main_account: true,
+        otp: otp,
+        is_verified: false,
+      });
+
+      // Save priority needs if provided
+      if (priority_needs && priority_needs.length > 0) {
+        const userPriorityNeeds = priority_needs.map((priorityId: number) => ({
+          user_id: newUser.id,
+          priority_need_id: priorityId,
+        }));
+
+        await UserPriorityNeed.bulkCreate(userPriorityNeeds);
+      }
+
+      return res.json({
+        code: 201,
+        status: 'success',
+        message: {
+          id: ['Pendaftaran berhasil'],
+          en: ['Registration successful'],
+        },
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
+        error: err,
+      });
+    }
+  },
+
+  async verifyAccount(req: Request, res: Response) {
+    try {
+      const { email, otp } = req.body;
+
+      const rules = {
+        email: 'required|email',
+        otp: 'required|string|size:6',
+      };
+
+      const validation = new Validator({ email, otp }, rules);
+      if (validation.fails()) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
+        });
+      }
+
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Pengguna tidak ditemukan'],
+            en: ['User not found'],
+          },
+        });
+      }
+
+      if (user.is_verified) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Akun sudah diverifikasi'],
+            en: ['Account already verified'],
+          },
+        });
+      }
+
+      if (user.otp !== otp) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['OTP tidak valid'],
+            en: ['Invalid OTP'],
+          },
+        });
+      }
+
+      // Verify the account
+      user.is_verified = true;
+      user.otp = undefined; // Clear OTP after verification
+      await user.save();
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        message: {
+          id: ['Akun berhasil diverifikasi'],
+          en: ['Account verified successfully'],
+        },
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
+        error: err,
+      });
+    }
+  },
+
+  async resendOTP(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      const rules = {
+        email: 'required|email',
+      };
+
+      const validation = new Validator({ email }, rules);
+      if (validation.fails()) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
+        });
+      }
+
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Pengguna tidak ditemukan'],
+            en: ['User not found'],
+          },
+        });
+      }
+
+      if (user.is_verified) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Akun sudah diverifikasi'],
+            en: ['Account already verified'],
+          },
+        });
+      }
+
+      // Generate new OTP
+      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Update user's OTP
+      user.otp = newOtp;
+      await user.save();
+
+      return res.json({
+        code: 200,
+        status: 'success',
+        message: {
+          id: ['OTP berhasil dikirim ulang'],
+          en: ['OTP sent successfully'],
+        },
+      });
+    } catch (err) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
+        error: err,
       });
     }
   },

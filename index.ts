@@ -69,6 +69,18 @@ const priorityNeedRouter = express.Router();
 PriorityNeedRoutes(priorityNeedRouter);
 app.use('/priority-needs', priorityNeedRouter);
 
+// 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({
+    code: 404,
+    status: 'error',
+    message: {
+      id: ['Route tidak ditemukan'],
+      en: ['Route not found'],
+    },
+  });
+});
+
 async function main(): Promise<void> {
   try {
     console.log('Starting server...');

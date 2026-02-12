@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Family, Jemaat, Event } from '../model';
+import { Family, Jemaat, Church } from '../model';
 import { QueryTypes } from 'sequelize';
 import sequelize from '../../config/db.config';
 
@@ -7,22 +7,24 @@ export const DashboardController = {
   async dashboard(req: Request, res: Response) {
     try {
       // Count total members
-      let { user } = req;
-      const totalMembers = await Jemaat.count({ where: { user_id: user?.id } });
+      let { user, church } = req;
+      const totalMembers = await Jemaat.count({
+        where: { church_id: church?.id },
+      });
 
       // Count total families
       const totalFamilies = await Family.count({
-        where: { user_id: user?.id },
+        where: { church_id: church?.id },
       });
 
       // Count male members
       const totalMale = await Jemaat.count({
-        where: { gender: 'male', user_id: user?.id },
+        where: { gender: 'male', church_id: church?.id },
       });
 
       // Count female members
       const totalFemale = await Jemaat.count({
-        where: { gender: 'female', user_id: user?.id },
+        where: { gender: 'female', church_id: church?.id },
       });
 
       // Get current month and year
@@ -32,9 +34,9 @@ export const DashboardController = {
 
       // Calculate income this month
       const incomeResult = await sequelize.query(
-        `SELECT COALESCE(SUM(t.amount), 0) as total FROM transactions t JOIN categories c ON t.category_id = c.id WHERE c.type = 'income' AND t.user_id = ? AND EXTRACT(YEAR FROM t.date) = ? AND EXTRACT(MONTH FROM t.date) = ?`,
+        `SELECT COALESCE(SUM(t.amount), 0) as total FROM transactions t JOIN categories c ON t.category_id = c.id WHERE c.type = 'income' AND t.church_id = ? AND EXTRACT(YEAR FROM t.date) = ? AND EXTRACT(MONTH FROM t.date) = ?`,
         {
-          replacements: [user?.id, currentYear, currentMonth],
+          replacements: [church?.id, currentYear, currentMonth],
           type: QueryTypes.SELECT,
         },
       );
@@ -42,9 +44,9 @@ export const DashboardController = {
 
       // Calculate expense this month
       const expenseResult = await sequelize.query(
-        `SELECT COALESCE(SUM(t.amount), 0) as total FROM transactions t JOIN categories c ON t.category_id = c.id WHERE c.type = 'expense' AND t.user_id = ? AND EXTRACT(YEAR FROM t.date) = ? AND EXTRACT(MONTH FROM t.date) = ?`,
+        `SELECT COALESCE(SUM(t.amount), 0) as total FROM transactions t JOIN categories c ON t.category_id = c.id WHERE c.type = 'expense' AND t.church_id = ? AND EXTRACT(YEAR FROM t.date) = ? AND EXTRACT(MONTH FROM t.date) = ?`,
         {
-          replacements: [user?.id, currentYear, currentMonth],
+          replacements: [church?.id, currentYear, currentMonth],
           type: QueryTypes.SELECT,
         },
       );
@@ -52,18 +54,18 @@ export const DashboardController = {
 
       // Get events this month
       const eventsThisMonth = await sequelize.query(
-        `SELECT id, title, start, "end", description FROM events WHERE user_id = ? AND EXTRACT(YEAR FROM start) = ? AND EXTRACT(MONTH FROM start) = ? ORDER BY start ASC`,
+        `SELECT id, title, start, "end", description FROM events WHERE church_id = ? AND EXTRACT(YEAR FROM start) = ? AND EXTRACT(MONTH FROM start) = ? ORDER BY start ASC`,
         {
-          replacements: [user?.id, currentYear, currentMonth],
+          replacements: [church?.id, currentYear, currentMonth],
           type: QueryTypes.SELECT,
         },
       );
 
       // Get birthdays this month
       const birthdaysThisMonth = await sequelize.query(
-        `SELECT id, name, birth_date, ${currentYear} - EXTRACT(YEAR FROM birth_date) as age FROM jemaat WHERE user_id = ? AND EXTRACT(MONTH FROM birth_date) = ? ORDER BY birth_date ASC`,
+        `SELECT id, name, birth_date, ${currentYear} - EXTRACT(YEAR FROM birth_date) as age FROM jemaat WHERE church_id = ? AND EXTRACT(MONTH FROM birth_date) = ? ORDER BY birth_date ASC`,
         {
-          replacements: [user?.id, currentMonth],
+          replacements: [church?.id, currentMonth],
           type: QueryTypes.SELECT,
         },
       );
@@ -95,6 +97,7 @@ export const DashboardController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
+        error,
       });
     }
   },

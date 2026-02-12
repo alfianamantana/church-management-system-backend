@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Validator from 'validatorjs';
-import { Church } from '../model';
+import { Church, User } from '../model';
 
 export const ChurchController = {
   async getAll(req: Request, res: Response) {
@@ -27,16 +27,58 @@ export const ChurchController = {
       });
     }
   },
-
   async create(req: Request, res: Response) {
     try {
+      let user = req.user;
+
+      // Fetch user from DB to get subscribe_type
+      const dbUser = await User.findByPk(user?.id);
+      if (!dbUser) {
+        return res.json({
+          code: 401,
+          status: 'error',
+          message: {
+            id: ['User tidak ditemukan'],
+            en: ['User not found'],
+          },
+        });
+      }
+
+      // Check church count limit based on subscribe_type
+      if (
+        dbUser.subscribe_type === 'bibit' ||
+        dbUser.subscribe_type === 'bertumbuh'
+      ) {
+        const churchCount = await Church.count({
+          where: { user_id: dbUser.id },
+        });
+        if (dbUser.subscribe_type === 'bibit' && churchCount >= 1) {
+          return res.json({
+            code: 403,
+            status: 'error',
+            message: {
+              id: ['Akun bibit hanya dapat membuat 1 gereja'],
+              en: ['Bibit plan can only create 1 church'],
+            },
+          });
+        }
+        if (dbUser.subscribe_type === 'bertumbuh' && churchCount >= 2) {
+          return res.json({
+            code: 403,
+            status: 'error',
+            message: {
+              id: ['Akun bertumbuh hanya dapat membuat maksimal 2 gereja'],
+              en: ['Bertumbuh plan can only create up to 2 churches'],
+            },
+          });
+        }
+      }
       const validation = new Validator(req.body, {
         name: 'required|string',
         email: 'required|email',
         city: 'required|string',
         country: 'required|string',
         phone_number: 'required|string',
-        user_id: 'required|integer',
       });
 
       if (validation.fails()) {
@@ -47,19 +89,24 @@ export const ChurchController = {
             id: ['Validasi gagal'],
             en: ['Validation failed'],
           },
-          errors: validation.errors.all(),
         });
       }
 
-      const church = await Church.create(req.body);
+      await Church.create({ ...req.body, user_id: user?.id });
+
+      const newuser = await User.findOne({
+        where: { id: user?.id },
+        include: [Church],
+      });
+
       return res.json({
         code: 201,
         status: 'success',
-        data: church,
         message: {
           id: ['Gereja berhasil dibuat'],
           en: ['Church created successfully'],
         },
+        data: newuser,
       });
     } catch (err) {
       return res.json({
