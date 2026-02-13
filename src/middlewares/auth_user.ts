@@ -5,7 +5,6 @@ declare global {
   namespace Express {
     interface Request {
       user?: User | null;
-      church?: Church | null;
     }
   }
 }
@@ -14,7 +13,6 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.token as string;
     const authorization = req.headers.authorization as string;
-    const church = req.headers.church as string;
 
     if (!token) {
       return res.json({
@@ -70,32 +68,6 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
         },
       });
     }
-
-    const finded_church = await Church.findOne({ where: { id: church } });
-
-    if (!finded_church) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: {
-          id: ['Tidak diizinkan'],
-          en: ['Unauthorize'],
-        },
-      });
-    }
-
-    if (finded_church.user_id !== user.id) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: {
-          id: ['Tidak diizinkan'],
-          en: ['Unauthorize'],
-        },
-      });
-    }
-
-    (req as Express.Request).church = finded_church;
     (req as Express.Request).user = user;
     next();
   } catch (error) {

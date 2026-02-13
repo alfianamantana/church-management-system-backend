@@ -329,6 +329,17 @@ export class Jemaat extends Model {
 
   @BelongsTo(() => Jemaat, { foreignKey: 'dad_id', as: 'dad' })
   dad?: Jemaat;
+
+  @ForeignKey(() => Jemaat)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    field: 'couple_id',
+  })
+  couple_id?: number;
+
+  @BelongsTo(() => Jemaat, { foreignKey: 'couple_id', as: 'couple' })
+  couple?: Jemaat;
   @Column({
     type: DataType.INTEGER,
     primaryKey: true,

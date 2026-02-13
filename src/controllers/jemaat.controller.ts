@@ -252,20 +252,8 @@ export const JemaatController = {
   },
   async createJemaat(req: Request, res: Response) {
     let transaction;
+    const { user, church } = req;
     try {
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
-      }
-
       const {
         name,
         birth_date,
@@ -311,7 +299,7 @@ export const JemaatController = {
           dad_id: dad_id || null,
           phone_number: phone_number || null,
           gender: gender || 'male',
-          church_id: church.id, // Add church_id
+          church_id: church?.id, // Add church_id
         },
         { transaction },
       );
