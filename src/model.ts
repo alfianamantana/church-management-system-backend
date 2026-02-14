@@ -251,9 +251,6 @@ export class Church extends Model {
   @HasMany(() => Role)
   roles?: Role[];
 
-  @HasMany(() => Category)
-  categories?: Category[];
-
   @HasMany(() => Transaction)
   transactions?: Transaction[];
 
@@ -340,6 +337,12 @@ export class Jemaat extends Model {
 
   @BelongsTo(() => Jemaat, { foreignKey: 'couple_id', as: 'couple' })
   couple?: Jemaat;
+
+  @HasMany(() => Jemaat, { foreignKey: 'mom_id', as: 'momChildren' })
+  momChildren?: Jemaat[];
+
+  @HasMany(() => Jemaat, { foreignKey: 'dad_id', as: 'dadChildren' })
+  dadChildren?: Jemaat[];
   @Column({
     type: DataType.INTEGER,
     primaryKey: true,
@@ -721,17 +724,6 @@ export class Category extends Model {
     comment: 'ID unik untuk kategori',
   })
   id!: number;
-
-  @ForeignKey(() => Church)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    field: 'church_id',
-  })
-  church_id!: number;
-
-  @BelongsTo(() => Church)
-  church!: Church;
 
   @Column({
     type: DataType.STRING(255),

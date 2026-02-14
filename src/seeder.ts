@@ -43,21 +43,12 @@ async function seedCategories() {
     { name: 'Pengeluaran Transportasi', type: 'expense' as const },
   ];
 
-  // Get demo church
-  const church = await Church.findOne({
-    where: { email: 'demo@gereja.com' },
-  });
-  if (!church) {
-    console.log('Demo church not found, skipping category seeding.');
-    return;
-  }
-
   for (const cat of categories) {
     const existing = await Category.findOne({
-      where: { name: cat.name, church_id: church.id },
+      where: { name: cat.name },
     });
     if (!existing) {
-      await Category.create({ ...cat, church_id: church.id });
+      await Category.create(cat);
       console.log(`Category "${cat.name}" seeded!`);
     } else {
       console.log(`Category "${cat.name}" already exists.`);

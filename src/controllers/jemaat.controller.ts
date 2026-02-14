@@ -30,6 +30,7 @@ export const JemaatController = {
       const dad = req.query.dad === 'true' ? true : false;
       const mom = req.query.dad === 'true' ? true : false;
       const children = req.query.children === 'true' ? true : false;
+      const couple = req.query.couple === 'true';
 
       // Get church for the user
       const church = await Church.findOne({ where: { user_id: req.user?.id } });
@@ -52,6 +53,13 @@ export const JemaatController = {
           ...whereClause,
           gender: String(gender),
         };
+      }
+
+      if (couple) {
+        includeClause.push({
+          model: Jemaat,
+          as: 'couple',
+        });
       }
 
       if (exclude_id) {
@@ -103,18 +111,18 @@ export const JemaatController = {
       if (children) {
         includeClause.push({
           model: Jemaat,
-          as: 'children',
-          where: {
-            [Op.or]: [
-              { mom_id: { [Op.col]: 'Jemaat.id' } },
-              { dad_id: { [Op.col]: 'Jemaat.id' } },
-            ],
-          },
+          as: 'momChildren',
+          required: false,
+        });
+        includeClause.push({
+          model: Jemaat,
+          as: 'dadChildren',
           required: false,
         });
       }
 
-      const { count, rows } = await Jemaat.findAndCountAll({
+      const count = await Jemaat.count({ where: whereClause });
+      let rows = await Jemaat.findAll({
         offset,
         limit,
         where: whereClause,
@@ -122,11 +130,24 @@ export const JemaatController = {
         attributes: [
           ...Object.keys(Jemaat.rawAttributes),
           [
-            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            fn(
+              'EXTRACT',
+              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+            ),
             'age',
           ],
         ],
         order: [['id', 'ASC']],
+      });
+
+      // Combine momChildren and dadChildren into children
+      rows = rows.map((row) => {
+        const plain = row.toJSON();
+        plain.children = [
+          ...(plain.momChildren || []),
+          ...(plain.dadChildren || []),
+        ];
+        return plain;
       });
 
       return res.json({
@@ -143,6 +164,8 @@ export const JemaatController = {
         },
       });
     } catch (err) {
+      console.log(err, '??');
+
       return res.json({
         code: 500,
         status: 'error',
@@ -154,8 +177,9 @@ export const JemaatController = {
       });
     }
   },
-  async updateJemaat(req: Request, res: Response) {
+  async update(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
       const rules = {
@@ -184,23 +208,11 @@ export const JemaatController = {
         phone_number,
         family_id,
         gender,
+        couple_id,
       } = req.body;
 
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
-      }
-
       const jemaat = await Jemaat.findOne({
-        where: { id, church_id: church.id },
+        where: { id, church_id: church?.id },
       });
 
       if (!jemaat) {
@@ -220,12 +232,17 @@ export const JemaatController = {
       if (typeof baptism_date !== 'undefined')
         jemaat.baptism_date = baptism_date;
       if (typeof is_married !== 'undefined') jemaat.is_married = is_married;
-      if (typeof mom_id !== 'undefined') jemaat.mom_id = mom_id;
-      if (typeof dad_id !== 'undefined') jemaat.dad_id = dad_id;
+      if (typeof mom_id !== 'undefined' && mom_id !== '')
+        jemaat.mom_id = Number(mom_id);
+      if (typeof dad_id !== 'undefined' && dad_id !== '')
+        jemaat.dad_id = Number(dad_id);
       if (typeof phone_number !== 'undefined')
         jemaat.phone_number = phone_number;
-      if (typeof family_id !== 'undefined') jemaat.family_id = family_id;
+      if (typeof family_id !== 'undefined' && family_id !== '')
+        jemaat.family_id = Number(family_id);
       if (typeof gender !== 'undefined') jemaat.gender = gender;
+      if (typeof couple_id !== 'undefined' && couple_id !== '')
+        jemaat.couple_id = Number(couple_id);
 
       await jemaat.save();
 
@@ -246,13 +263,12 @@ export const JemaatController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
   async createJemaat(req: Request, res: Response) {
     let transaction;
-    const { user, church } = req;
+    const { church } = req;
     try {
       const {
         name,
@@ -264,6 +280,7 @@ export const JemaatController = {
         dad_id,
         phone_number,
         gender,
+        couple_id,
       } = req.body;
 
       const rules = {
@@ -299,6 +316,7 @@ export const JemaatController = {
           dad_id: dad_id || null,
           phone_number: phone_number || null,
           gender: gender || 'male',
+          couple_id: couple_id || null,
           church_id: church?.id, // Add church_id
         },
         { transaction },
@@ -467,7 +485,10 @@ export const JemaatController = {
         attributes: [
           ...Object.keys(Jemaat.rawAttributes),
           [
-            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            fn(
+              'EXTRACT',
+              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+            ),
             'age',
           ],
         ],
@@ -542,7 +563,7 @@ export const JemaatController = {
             sequelize.where(
               sequelize.fn(
                 'EXTRACT',
-                sequelize.literal('MONTH FROM birth_date'),
+                sequelize.literal('MONTH FROM "Jemaat"."birth_date"'),
               ),
               month,
             ),
@@ -552,7 +573,10 @@ export const JemaatController = {
         attributes: [
           ...Object.keys(Jemaat.rawAttributes),
           [
-            fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
+            fn(
+              'EXTRACT',
+              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+            ),
             'age',
           ],
         ],

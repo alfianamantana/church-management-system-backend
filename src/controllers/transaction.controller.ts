@@ -88,7 +88,10 @@ export const TransactionController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
 
       // Get church for the user
@@ -106,13 +109,17 @@ export const TransactionController = {
 
       // Check if category exists
       const category = await Category.findOne({
-        where: { id: category_id, church_id: church.id },
+        where: { id: category_id },
       });
+
       if (!category) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Category not found'],
+          message: {
+            id: ['Kategori tidak ditemukan'],
+            en: ['Category not found'],
+          },
         });
       }
 
@@ -140,7 +147,6 @@ export const TransactionController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -157,7 +163,10 @@ export const TransactionController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            en: ['Validation failed'],
+            id: ['Validasi gagal'],
+          },
         });
 
       // Get church for the user
@@ -180,14 +189,17 @@ export const TransactionController = {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Transaction not found'],
+          message: {
+            id: ['Transaksi tidak ditemukan'],
+            en: ['Transaction not found'],
+          },
         });
       }
 
       if (date) transaction.date = date;
       if (category_id) {
         const category = await Category.findOne({
-          where: { id: category_id, church_id: church.id },
+          where: { id: category_id },
         });
         if (!category) {
           return res.json({
@@ -236,7 +248,10 @@ export const TransactionController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['Validasi gagal'],
+            en: ['Validation failed'],
+          },
         });
 
       // Get church for the user
@@ -259,7 +274,10 @@ export const TransactionController = {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Transaction not found'],
+          message: {
+            id: ['Transaksi tidak ditemukan'],
+            en: ['Transaction not found'],
+          },
         });
       }
 
@@ -281,7 +299,6 @@ export const TransactionController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },

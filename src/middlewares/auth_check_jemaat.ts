@@ -38,8 +38,6 @@ const auth_check_jemaat = async (
     }
     next();
   } catch (error) {
-    console.log(error, '/');
-
     return res.json({
       code: 500,
       status: 'error',

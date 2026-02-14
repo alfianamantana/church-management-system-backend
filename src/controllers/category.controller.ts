@@ -3,21 +3,7 @@ import { Category, Church } from '../model';
 
 export const getCategories = async (req: Request, res: Response) => {
   try {
-    // Get church for the user
-    const church = await Church.findOne({ where: { user_id: req.user?.id } });
-    if (!church) {
-      return res.json({
-        code: 404,
-        status: 'error',
-        message: {
-          id: ['Gereja tidak ditemukan'],
-          en: ['Church not found'],
-        },
-      });
-    }
-
     const categories = await Category.findAll({
-      where: { church_id: church.id },
       order: [['createdAt', 'ASC']],
     });
 
