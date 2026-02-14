@@ -9,22 +9,23 @@ export const UserController = {
   async getProfile(req: Request, res: Response) {
     try {
       const user = req.user;
-      let userData = {
-        ...user?.get({ plain: true }),
-      };
-      delete userData?.password;
+      const church = req.query.church === 'true';
 
-      // Add expire field based on role and subscribe_type
-      let expire = null;
-      if (user?.role !== 'superadmin' && user?.subscribe_type !== 'full') {
-        expire = user?.subscribe_until;
+      let includeCondition: any = [];
+
+      if (church) {
+        includeCondition.push({ model: Church });
       }
-      userData.expire = expire;
+
+      const userInstance = await User.findOne({
+        where: { id: user?.id },
+        include: includeCondition,
+      });
 
       return res.json({
         code: 200,
         status: 'success',
-        data: userData,
+        data: [userInstance],
         message: {
           id: ['Profil pengguna berhasil diambil'],
           en: ['User profile retrieved successfully'],
@@ -38,7 +39,6 @@ export const UserController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
