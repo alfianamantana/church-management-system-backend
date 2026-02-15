@@ -63,6 +63,13 @@ export class User extends Model {
   phone_number!: string;
 
   @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    field: 'country',
+  })
+  country?: string;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: 'subscribe_until',
@@ -392,6 +399,13 @@ export class Jemaat extends Model {
   phone_number!: string;
 
   @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    field: 'country',
+  })
+  country?: string;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: 'baptism_date',
@@ -566,6 +580,13 @@ export class Member extends Model {
     field: 'phone',
   })
   phone?: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    field: 'country',
+  })
+  country?: string;
 
   @HasMany(() => ServiceAssignment)
   serviceAssignments?: ServiceAssignment[];

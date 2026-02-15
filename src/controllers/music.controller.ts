@@ -15,13 +15,14 @@ export const MusicController = {
   // Member CRUD
   async getMembers(req: Request, res: Response) {
     try {
+      const { church } = req;
       let { page = 1, limit = 10, q } = req.query;
       page = Number(page) || 1;
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
       let whereClause: any = {
-        user_id: req.user?.id,
+        church_id: church?.id,
       };
       if (q) {
         whereClause = { ...whereClause, name: { [Op.iLike]: `%${q}%` } };
@@ -48,13 +49,13 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async createMember(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { name, phone } = req.body;
 
       const rules = {
@@ -67,10 +68,13 @@ export const MusicController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            en: ['Validation failed'],
+            id: ['Validasi gagal'],
+          },
         });
 
-      await Member.create({ user_id: req.user?.id, name, phone });
+      await Member.create({ church_id: church?.id, name, phone });
 
       return res.json({
         code: 201,
@@ -88,13 +92,13 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async updateMember(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
       const { name, phone } = req.body;
 
@@ -104,17 +108,24 @@ export const MusicController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: ['ID anggota diperlukan dan harus berupa angka'],
+            en: ['Member ID is required and must be a number'],
+          },
         });
 
       const member = await Member.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
       });
+
       if (!member) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Member not found'],
+          message: {
+            id: ['Anggota tidak ditemukan'],
+            en: ['Member not found'],
+          },
         });
       }
 
@@ -139,7 +150,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -194,13 +204,14 @@ export const MusicController = {
   // Role CRUD
   async getRoles(req: Request, res: Response) {
     try {
+      const { church } = req;
       let { page = 1, limit = 10, q } = req.query;
       page = Number(page) || 1;
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
       let whereClause: any = {
-        user_id: req.user?.id,
+        church_id: church?.id,
       };
       if (q) {
         whereClause = { ...whereClause, role_name: { [Op.iLike]: `%${q}%` } };
@@ -234,6 +245,7 @@ export const MusicController = {
 
   async createRole(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { role_name } = req.body;
 
       const rules = { role_name: 'required|string' };
@@ -245,7 +257,7 @@ export const MusicController = {
           message: validation.errors.all(),
         });
 
-      await Role.create({ user_id: req.user?.id, role_name });
+      await Role.create({ church_id: church?.id, role_name });
 
       return res.json({
         code: 201,
@@ -368,6 +380,7 @@ export const MusicController = {
   // Schedule CRUD
   async getSchedules(req: Request, res: Response) {
     try {
+      const { church } = req;
       let { page = 1, limit = 10, q } = req.query;
       page = Number(page) || 1;
       limit = Number(limit) || 10;
@@ -390,7 +403,7 @@ export const MusicController = {
       }
 
       let whereClause: any = {
-        user_id: req.user?.id,
+        church_id: church?.id,
       };
 
       if (id) {
@@ -487,6 +500,7 @@ export const MusicController = {
   async createSchedule(req: Request, res: Response) {
     let transaction;
     try {
+      const { church } = req;
       const { schedules = [] } = req.body;
 
       const rules = {
@@ -499,7 +513,16 @@ export const MusicController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: [
+              'Validasi gagal',
+              'Pastikan semua jadwal memiliki nama dan tanggal yang valid',
+            ],
+            en: [
+              'Validation failed',
+              'Ensure all schedules have valid name and date',
+            ],
+          },
         });
 
       transaction = await Schedule.sequelize?.transaction();
@@ -507,7 +530,7 @@ export const MusicController = {
       for (const sch of schedules) {
         let createdSchedule = await Schedule.create(
           {
-            user_id: req.user?.id,
+            church_id: church?.id,
             service_name: sch.service_name,
             scheduled_at: sch.scheduled_at,
           },
@@ -554,7 +577,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -562,6 +584,7 @@ export const MusicController = {
   async updateSchedule(req: Request, res: Response) {
     let transaction;
     try {
+      const { church } = req;
       const { schedules = [] } = req.body;
 
       const rules = {
@@ -574,7 +597,16 @@ export const MusicController = {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: [
+              'Validasi gagal',
+              'Pastikan semua jadwal memiliki nama dan tanggal yang valid',
+            ],
+            en: [
+              'Validation failed',
+              'Ensure all schedules have valid name and date',
+            ],
+          },
         });
 
       transaction = await Schedule.sequelize?.transaction();
@@ -584,11 +616,21 @@ export const MusicController = {
         if (sch.id) {
           // Update existing schedule
           schedule = await Schedule.findOne({
-            where: { id: sch.id, user_id: req.user?.id },
+            where: { id: sch.id, church_id: church?.id },
             transaction,
           });
           if (!schedule) {
-            throw new Error(`Schedule with id ${sch.id} not found`);
+            if (transaction) {
+              await transaction.rollback();
+            }
+            return res.json({
+              code: 404,
+              status: 'error',
+              message: {
+                id: [`Jadwal dengan ID ${sch.id} tidak ditemukan`],
+                en: [`Schedule with ID ${sch.id} not found`],
+              },
+            });
           }
           schedule.service_name = sch.service_name;
           schedule.scheduled_at = sch.scheduled_at;
@@ -597,7 +639,7 @@ export const MusicController = {
           // Create new schedule if no id (though for update, probably all have id)
           schedule = await Schedule.create(
             {
-              user_id: req.user?.id,
+              church_id: church?.id,
               service_name: sch.service_name,
               scheduled_at: sch.scheduled_at,
             },

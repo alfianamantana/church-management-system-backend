@@ -479,7 +479,8 @@ export const UserController = {
 
   async register(req: Request, res: Response) {
     try {
-      const { name, email, password, phone_number, priority_needs } = req.body;
+      const { name, email, password, phone_number, priority_needs, country } =
+        req.body;
 
       const rules = {
         name: 'required|string|min:2|max:255',
@@ -488,10 +489,11 @@ export const UserController = {
         phone_number: 'required|string|min:10|max:15',
         priority_needs: 'array',
         'priority_needs.*': 'numeric',
+        country: 'required|string|min:2|max:255',
       };
 
       const validation = new Validator(
-        { name, email, password, phone_number, priority_needs },
+        { name, email, password, phone_number, priority_needs, country },
         rules,
       );
 
@@ -560,6 +562,7 @@ export const UserController = {
         is_main_account: true,
         otp: otp,
         is_verified: false,
+        country,
       });
 
       // Save priority needs if provided
@@ -572,6 +575,15 @@ export const UserController = {
         await UserPriorityNeed.bulkCreate(userPriorityNeeds);
       }
 
+      // Generate token and create auth record
+      const token = generateToken(25);
+      const valid_until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      await Auth.create({ user_id: newUser.id, token, valid_until });
+
+      // Get user data without password
+      const { password: _, ...userData } = newUser.get({ plain: true });
+
       return res.json({
         code: 201,
         status: 'success',
@@ -579,6 +591,8 @@ export const UserController = {
           id: ['Pendaftaran berhasil'],
           en: ['Registration successful'],
         },
+        token: token,
+        data: userData,
       });
     } catch (err) {
       return res.json({
