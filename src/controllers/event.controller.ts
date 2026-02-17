@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Event, Church } from '../model';
+import { Event, Church, UserChurch } from '../model';
 import Validator from 'validatorjs';
 import { Op } from 'sequelize';
 
@@ -15,7 +15,12 @@ export const EventController = {
       const end_date = end ? new Date(String(end)) : null;
 
       // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
+      const userChurch = await UserChurch.findOne({
+        where: { user_id: req.user?.id },
+      });
+      const church = userChurch
+        ? await Church.findOne({ where: { id: userChurch.church_id } })
+        : null;
       if (!church) {
         return res.json({
           code: 404,

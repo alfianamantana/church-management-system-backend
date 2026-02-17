@@ -10,21 +10,77 @@ import {
 } from 'sequelize-typescript';
 
 @Table({
+  tableName: 'user_roles',
+  timestamps: true,
+  underscored: true,
+  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
+})
+export class UserRole extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+}
+
+@Table({
+  tableName: 'subscribe_types',
+  timestamps: true,
+  underscored: true,
+  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
+})
+export class SubscribeType extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @HasMany(() => User)
+  users?: User[];
+}
+
+@Table({
   tableName: 'users',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['unique_key'], unique: true },
+    { fields: ['email'], unique: true },
+    { fields: ['superuser_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class User extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @Column({
     type: DataType.STRING(255),
@@ -62,12 +118,16 @@ export class User extends Model {
   })
   phone_number!: string;
 
+  @ForeignKey(() => UserRole)
   @Column({
-    type: DataType.STRING(255),
+    type: DataType.UUID,
     allowNull: true,
-    field: 'country',
+    field: 'role_id',
   })
-  country?: string;
+  role_id?: string;
+
+  @BelongsTo(() => UserRole, { foreignKey: 'role_id', as: 'userRole' })
+  userRole?: UserRole;
 
   @Column({
     type: DataType.DATE,
@@ -76,20 +136,19 @@ export class User extends Model {
   })
   subscribe_until?: Date;
 
+  @ForeignKey(() => SubscribeType)
   @Column({
-    type: DataType.STRING(20),
+    type: DataType.UUID,
     allowNull: false,
-    defaultValue: 'user',
+    field: 'subscribe_type_id',
   })
-  role!: 'superadmin' | 'user';
+  subscribe_type_id!: string;
 
-  @Column({
-    type: DataType.STRING(10),
-    allowNull: false,
-    defaultValue: 'basic',
-    field: 'subscribe_type',
+  @BelongsTo(() => SubscribeType, {
+    foreignKey: 'subscribe_type_id',
+    as: 'subscribeType',
   })
-  subscribe_type!: 'bibit' | 'bertumbuh' | 'full';
+  subscribeType?: SubscribeType;
 
   @Column({
     type: DataType.INTEGER,
@@ -102,107 +161,118 @@ export class User extends Model {
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: true,
-    field: 'is_trial_account',
-  })
-  is_trial_account!: boolean;
-
-  @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-    field: 'is_main_account',
-  })
-  is_main_account!: boolean;
-
-  @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
     defaultValue: false,
     field: 'is_verified',
   })
   is_verified!: boolean;
 
+  @ForeignKey(() => User)
   @Column({
-    type: DataType.STRING(6),
+    type: DataType.UUID,
     allowNull: true,
-    field: 'otp',
+    field: 'superuser_id',
   })
-  otp?: string;
+  superuser_id?: string;
 
-  @HasMany(() => Church)
+  @BelongsTo(() => User, { foreignKey: 'superuser_id', as: 'superuser' })
+  superuser?: User;
+
+  @HasMany(() => User, { foreignKey: 'superuser_id', as: 'subUsers' })
+  subUsers?: User[];
+
+  @BelongsToMany(() => Church, { through: () => UserChurch })
   churches?: Church[];
-
-  @HasMany(() => RoleAccount)
-  roleAccounts?: RoleAccount[];
 
   @BelongsToMany(() => PriorityNeed, { through: () => UserPriorityNeed })
   priorityNeeds?: PriorityNeed[];
+
+  @HasMany(() => UserOtp)
+  userOtps?: UserOtp[];
+
+  toJSON() {
+    const values = { ...this.get() };
+    // Include role from relationship if loaded
+    if (this.userRole) {
+      values.role = this.userRole.name;
+    }
+    // Include subscribe type from relationship if loaded
+    if (this.subscribeType) {
+      values.subscribe_type = this.subscribeType.name;
+    }
+    return values;
+  }
 }
 
 @Table({
-  tableName: 'role_accounts',
+  tableName: 'user_otps',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['user_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
-export class RoleAccount extends Model {
+export class UserOtp extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => User)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'user_id',
   })
-  user_id!: number;
+  user_id!: string;
 
   @BelongsTo(() => User)
   user!: User;
 
   @Column({
-    type: DataType.STRING(255),
+    type: DataType.STRING(6),
     allowNull: false,
-    field: 'name',
   })
-  name!: string;
+  code!: string;
+
+  @Column({
+    type: DataType.ENUM('activation', '2fa', 'reset_password', 'change_email'),
+    allowNull: false,
+  })
+  type!: 'activation' | '2fa' | 'reset_password' | 'change_email';
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'expired_at',
+  })
+  expired_at!: Date;
 }
 
 @Table({
   tableName: 'churches',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['email'], unique: true },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Church extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
-
-  @ForeignKey(() => User)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    field: 'user_id',
-  })
-  user_id!: number;
-
-  @BelongsTo(() => User)
-  user!: User;
+  id!: string;
 
   @Column({
     type: DataType.STRING(255),
@@ -227,13 +297,6 @@ export class Church extends Model {
   city!: string;
 
   @Column({
-    type: DataType.STRING(255),
-    allowNull: false,
-    field: 'country',
-  })
-  country!: string;
-
-  @Column({
     type: DataType.STRING(30),
     allowNull: false,
     field: 'phone_number',
@@ -246,8 +309,8 @@ export class Church extends Model {
   @HasMany(() => Family)
   families?: Family[];
 
-  @HasMany(() => Jemaat)
-  jemaats?: Jemaat[];
+  @HasMany(() => Congregation)
+  jemaats?: Congregation[];
 
   @HasMany(() => Schedule)
   schedules?: Schedule[];
@@ -263,32 +326,38 @@ export class Church extends Model {
 
   @HasMany(() => Asset)
   assets?: Asset[];
+
+  @BelongsToMany(() => User, { through: () => UserChurch })
+  users?: User[];
 }
 
 @Table({
   tableName: 'families',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Family extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -300,72 +369,81 @@ export class Family extends Model {
   })
   name!: string;
 
-  @HasMany(() => Jemaat)
-  jemaats?: Jemaat[];
+  @HasMany(() => Congregation)
+  jemaats?: Congregation[];
 }
 
 @Table({
-  tableName: 'jemaat',
+  tableName: 'congregation',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  paranoid: true,
+  indexes: [
+    { fields: ['mom_id'] },
+    { fields: ['dad_id'] },
+    { fields: ['couple_id'] },
+    { fields: ['church_id'] },
+    { fields: ['family_id'] },
+    { fields: ['birth_date'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
-export class Jemaat extends Model {
-  @ForeignKey(() => Jemaat)
+export class Congregation extends Model {
+  @ForeignKey(() => Congregation)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: true,
     field: 'mom_id',
   })
-  mom_id?: number;
+  mom_id?: string;
 
-  @BelongsTo(() => Jemaat, { foreignKey: 'mom_id', as: 'mom' })
-  mom?: Jemaat;
+  @BelongsTo(() => Congregation, { foreignKey: 'mom_id', as: 'mom' })
+  mom?: Congregation;
 
-  @ForeignKey(() => Jemaat)
+  @ForeignKey(() => Congregation)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: true,
     field: 'dad_id',
   })
-  dad_id?: number;
+  dad_id?: string;
 
-  @BelongsTo(() => Jemaat, { foreignKey: 'dad_id', as: 'dad' })
-  dad?: Jemaat;
+  @BelongsTo(() => Congregation, { foreignKey: 'dad_id', as: 'dad' })
+  dad?: Congregation;
 
-  @ForeignKey(() => Jemaat)
+  @ForeignKey(() => Congregation)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: true,
     field: 'couple_id',
   })
-  couple_id?: number;
+  couple_id?: string;
 
-  @BelongsTo(() => Jemaat, { foreignKey: 'couple_id', as: 'couple' })
-  couple?: Jemaat;
+  @BelongsTo(() => Congregation, { foreignKey: 'couple_id', as: 'couple' })
+  couple?: Congregation;
 
-  @HasMany(() => Jemaat, { foreignKey: 'mom_id', as: 'momChildren' })
-  momChildren?: Jemaat[];
+  @HasMany(() => Congregation, { foreignKey: 'mom_id', as: 'momChildren' })
+  momChildren?: Congregation[];
 
-  @HasMany(() => Jemaat, { foreignKey: 'dad_id', as: 'dadChildren' })
-  dadChildren?: Jemaat[];
+  @HasMany(() => Congregation, { foreignKey: 'dad_id', as: 'dadChildren' })
+  dadChildren?: Congregation[];
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -399,13 +477,6 @@ export class Jemaat extends Model {
   phone_number!: string;
 
   @Column({
-    type: DataType.STRING(255),
-    allowNull: true,
-    field: 'country',
-  })
-  country?: string;
-
-  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: 'baptism_date',
@@ -430,11 +501,11 @@ export class Jemaat extends Model {
 
   @ForeignKey(() => Family)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: true,
     field: 'family_id',
   })
-  family_id?: number;
+  family_id?: string;
 
   @BelongsTo(() => Family)
   family?: Family;
@@ -444,26 +515,29 @@ export class Jemaat extends Model {
   tableName: 'auths',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['user_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Auth extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => User)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'user_id',
   })
-  user_id!: number;
+  user_id!: string;
 
   @BelongsTo(() => User)
   user!: User;
@@ -486,26 +560,31 @@ export class Auth extends Model {
   tableName: 'events',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['start'] },
+    { fields: ['end'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Event extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -543,26 +622,29 @@ export class Event extends Model {
   tableName: 'members',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Member extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -581,41 +663,37 @@ export class Member extends Model {
   })
   phone?: string;
 
-  @Column({
-    type: DataType.STRING(255),
-    allowNull: true,
-    field: 'country',
-  })
-  country?: string;
-
   @HasMany(() => ServiceAssignment)
   serviceAssignments?: ServiceAssignment[];
 }
 
 @Table({
-  tableName: 'roles',
+  tableName: 'role_service_assignment',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Role extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -635,26 +713,30 @@ export class Role extends Model {
   tableName: 'schedules',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['scheduled_at'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Schedule extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -681,48 +763,53 @@ export class Schedule extends Model {
   tableName: 'service_assignments',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['schedule_id'] },
+    { fields: ['member_id'] },
+    { fields: ['role_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class ServiceAssignment extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Schedule)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'schedule_id',
   })
-  schedule_id!: number;
+  schedule_id!: string;
 
   @BelongsTo(() => Schedule)
   schedule!: Schedule;
 
   @ForeignKey(() => Member)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'member_id',
   })
-  member_id!: number;
+  member_id!: string;
 
   @BelongsTo(() => Member)
   member!: Member;
 
   @ForeignKey(() => Role)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'role_id',
   })
-  role_id!: number;
+  role_id!: string;
 
   @BelongsTo(() => Role)
   role!: Role;
@@ -732,19 +819,32 @@ export class ServiceAssignment extends Model {
   tableName: 'categories',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Category extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
-    comment: 'ID unik untuk kategori',
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @Column({
     type: DataType.STRING(255),
@@ -767,27 +867,32 @@ export class Category extends Model {
   tableName: 'transactions',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  paranoid: true,
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['category_id'] },
+    { fields: ['date'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Transaction extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
-    comment: 'ID unik untuk transaksi',
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -801,11 +906,11 @@ export class Transaction extends Model {
 
   @ForeignKey(() => Category)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     comment: 'ID kategori yang terkait dengan transaksi',
   })
-  category_id!: number;
+  category_id!: string;
 
   @BelongsTo(() => Category)
   category!: Category;
@@ -829,27 +934,30 @@ export class Transaction extends Model {
   tableName: 'assets',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['acquisition_date'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class Asset extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
-    comment: 'ID unik untuk asset',
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Church)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'church_id',
   })
-  church_id!: number;
+  church_id!: string;
 
   @BelongsTo(() => Church)
   church!: Church;
@@ -916,18 +1024,17 @@ export class Asset extends Model {
   tableName: 'priority_needs',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
 })
 export class PriorityNeed extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @Column({
     type: DataType.STRING(255),
@@ -951,38 +1058,86 @@ export class PriorityNeed extends Model {
   tableName: 'user_priority_needs',
   timestamps: true,
   underscored: true,
-  charset: 'utf8mb4',
-  collate: 'utf8mb4_general_ci',
+  indexes: [
+    { fields: ['user_id'] },
+    { fields: ['priority_need_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class UserPriorityNeed extends Model {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
     unique: true,
     allowNull: false,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => User)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'user_id',
   })
-  user_id!: number;
+  user_id!: string;
 
   @BelongsTo(() => User)
   user!: User;
 
   @ForeignKey(() => PriorityNeed)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     allowNull: false,
     field: 'priority_need_id',
   })
-  priority_need_id!: number;
+  priority_need_id!: string;
 
   @BelongsTo(() => PriorityNeed)
   priorityNeed!: PriorityNeed;
+}
+
+@Table({
+  tableName: 'user_churches',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['user_id'] },
+    { fields: ['church_id'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
+})
+export class UserChurch extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'user_id',
+  })
+  user_id!: string;
+
+  @BelongsTo(() => User)
+  user!: User;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
 }

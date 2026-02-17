@@ -1,25 +1,25 @@
 import { Router } from 'express';
-import { JemaatController } from '../controllers/jemaat.controller';
+import { CongregationController } from '../controllers/jemaat.controller';
 import auth_user from '../middlewares/auth_user';
 import auth_check_jemaat from '../middlewares/auth_check_jemaat';
 import auth_church from '../middlewares/auth_church';
-export const JemaatRoutes = (router: Router): void => {
-  router.put('/', [auth_user, auth_church], JemaatController.update);
+export const CongregationRoutes = (router: Router): void => {
+  router.get('/', [auth_user, auth_church], CongregationController.get);
+  router.put('/', [auth_user, auth_church], CongregationController.update);
   router.post(
     '/',
     [auth_user, auth_church, auth_check_jemaat],
-    JemaatController.createJemaat,
+    CongregationController.create,
   );
-  router.get('/', [auth_user, auth_church], JemaatController.getAll);
   router.get(
     '/birthday',
     [auth_user, auth_church],
-    JemaatController.getBirthdayByMonth,
+    CongregationController.getBirthdayByMonth,
   );
   router.get(
     '/children',
     [auth_user, auth_church],
-    JemaatController.getChildren,
+    CongregationController.getChildren,
   );
-  router.delete('/', [auth_user, auth_church], JemaatController.deleteJemaat);
+  router.delete('/', [auth_user, auth_church], CongregationController.delete);
 };

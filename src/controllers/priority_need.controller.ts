@@ -22,7 +22,6 @@ export const PriorityNeedController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },

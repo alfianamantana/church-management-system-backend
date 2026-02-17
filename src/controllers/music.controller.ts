@@ -540,14 +540,14 @@ export const MusicController = {
         // Handle instrument assignments if provided
         if (sch.instrument_assignments) {
           for (const instrument_id in sch.instrument_assignments) {
-            const member_ids: number[] =
+            const member_ids: string[] =
               sch.instrument_assignments[instrument_id];
             for (const member_id of member_ids) {
               await ServiceAssignment.create(
                 {
                   schedule_id: createdSchedule.id,
                   member_id,
-                  role_id: Number(instrument_id), // assuming instrument_id maps to role_id
+                  role_id: instrument_id, // assuming instrument_id maps to role_id
                 },
                 { transaction },
               );
@@ -656,14 +656,14 @@ export const MusicController = {
         // Handle instrument assignments if provided
         if (sch.instrument_assignments) {
           for (const instrument_id in sch.instrument_assignments) {
-            const member_ids: number[] =
+            const member_ids: string[] =
               sch.instrument_assignments[instrument_id];
             for (const member_id of member_ids) {
               await ServiceAssignment.create(
                 {
                   schedule_id: schedule.id,
                   member_id,
-                  role_id: Number(instrument_id), // assuming instrument_id maps to role_id
+                  role_id: instrument_id, // assuming instrument_id maps to role_id
                 },
                 { transaction },
               );

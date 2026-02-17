@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
-import { Jemaat, User, Church } from '../model';
-import Validator from 'validatorjs';
+import { Congregation, User, Church } from '../model';
 import { Op, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
+import { getValidationRules, validateField } from '../helpers';
 
-export const JemaatController = {
-  async getAll(req: Request, res: Response) {
+export const CongregationController = {
+  async get(req: Request, res: Response) {
+    const { church } = req;
     try {
-      let {
+      const {
         page = 1,
         limit = 10,
         id,
@@ -15,124 +16,60 @@ export const JemaatController = {
         family_id,
         exclude_id,
         gender,
+        birth_date_start,
+        birth_date_end,
+        dad,
+        mom,
+        children,
+        couple,
       } = req.query;
 
-      page = Number(page) || 1;
-      limit = Number(limit) || 10;
-      const offset = (page - 1) * limit;
-      const birth_date_start = req.query.birth_date_start
-        ? new Date(String(req.query.birth_date_start))
-        : null;
-      const birth_date_end = req.query.birth_date_end
-        ? new Date(String(req.query.birth_date_end))
-        : null;
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
 
-      const dad = req.query.dad === 'true' ? true : false;
-      const mom = req.query.dad === 'true' ? true : false;
-      const children = req.query.children === 'true' ? true : false;
-      const couple = req.query.couple === 'true';
+      const whereClause: any = {
+        church_id: church?.id,
+        ...(gender && { gender: String(gender) }),
+        ...(exclude_id && { id: { [Op.not]: exclude_id } }),
+        ...(q && { name: { [Op.iLike]: `%${q}%` } }),
+        ...(id && { id }),
+        ...(family_id && { family_id }),
+        ...(birth_date_start &&
+          birth_date_end && {
+            birth_date: {
+              [Op.between]: [
+                new Date(String(birth_date_start)),
+                new Date(String(birth_date_end)),
+              ],
+            },
+          }),
+      };
 
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
-      }
+      const includeClause: any[] = [
+        ...(couple === 'true' ? [{ model: Congregation, as: 'couple' }] : []),
+        ...(dad === 'true' ? [{ model: Congregation, as: 'dad' }] : []),
+        ...(mom === 'true' ? [{ model: Congregation, as: 'mom' }] : []),
+        ...(children === 'true'
+          ? [
+              { model: Congregation, as: 'momChildren', required: false },
+              { model: Congregation, as: 'dadChildren', required: false },
+            ]
+          : []),
+      ].flat();
 
-      let whereClause: any = { church_id: church.id }; // Add church filter
-      let includeClause: any[] = [];
-
-      if (gender) {
-        whereClause = {
-          ...whereClause,
-          gender: String(gender),
-        };
-      }
-
-      if (couple) {
-        includeClause.push({
-          model: Jemaat,
-          as: 'couple',
-        });
-      }
-
-      if (exclude_id) {
-        whereClause = {
-          ...whereClause,
-          id: { [Op.not]: Number(exclude_id) },
-        };
-      }
-
-      if (birth_date_start && birth_date_end) {
-        whereClause = {
-          ...whereClause,
-          birth_date: { [Op.between]: [birth_date_start, birth_date_end] },
-        };
-      }
-
-      if (q) {
-        whereClause = {
-          ...whereClause,
-          name: { [Op.iLike]: `%${q}%` },
-        };
-      }
-
-      if (id) {
-        whereClause = {
-          ...whereClause,
-          id: Number(id),
-        };
-      }
-
-      if (family_id) {
-        whereClause = { ...whereClause, family_id: Number(family_id) };
-      }
-
-      if (dad) {
-        includeClause.push({
-          model: Jemaat,
-          as: 'dad',
-        });
-      }
-
-      if (mom) {
-        includeClause.push({
-          model: Jemaat,
-          as: 'mom',
-        });
-      }
-
-      if (children) {
-        includeClause.push({
-          model: Jemaat,
-          as: 'momChildren',
-          required: false,
-        });
-        includeClause.push({
-          model: Jemaat,
-          as: 'dadChildren',
-          required: false,
-        });
-      }
-
-      const count = await Jemaat.count({ where: whereClause });
-      let rows = await Jemaat.findAll({
+      const count = await Congregation.count({ where: whereClause });
+      let rows = await Congregation.findAll({
         offset,
-        limit,
+        limit: limitNum,
         where: whereClause,
         include: includeClause,
         attributes: [
-          ...Object.keys(Jemaat.rawAttributes),
+          ...Object.keys(Congregation.rawAttributes),
           [
             fn(
               'EXTRACT',
-              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+              sequelize.literal('YEAR FROM AGE("Congregation"."birth_date")'),
             ),
             'age',
           ],
@@ -140,7 +77,6 @@ export const JemaatController = {
         order: [['id', 'ASC']],
       });
 
-      // Combine momChildren and dadChildren into children
       rows = rows.map((row) => {
         const plain = row.toJSON();
         plain.children = [
@@ -154,18 +90,16 @@ export const JemaatController = {
         code: 200,
         status: 'success',
         message: {
-          id: ['Data Jemaat berhasil diambil'],
+          id: ['Data Congregation berhasil diambil'],
           en: ['Congregation data retrieved successfully'],
         },
         data: rows,
         pagination: {
           total: count,
-          page,
+          page: pageNum,
         },
       });
     } catch (err) {
-      console.log(err, '??');
-
       return res.json({
         code: 500,
         status: 'error',
@@ -182,20 +116,27 @@ export const JemaatController = {
       const { church } = req;
       const { id } = req.query;
 
-      const rules = {
-        id: 'required|numeric',
-      };
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validate id field
+      const errors = validateField(id, validationRules.id);
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Permintaan tidak valid'],
-            en: ['Invalid request'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       const {
         name,
@@ -211,7 +152,7 @@ export const JemaatController = {
         couple_id,
       } = req.body;
 
-      const jemaat = await Jemaat.findOne({
+      const jemaat = await Congregation.findOne({
         where: { id, church_id: church?.id },
       });
 
@@ -220,7 +161,7 @@ export const JemaatController = {
           code: 404,
           status: 'error',
           message: {
-            id: ['Jemaat tidak ditemukan'],
+            id: ['Congregation tidak ditemukan'],
             en: ['Congregation not found'],
           },
         });
@@ -233,16 +174,16 @@ export const JemaatController = {
         jemaat.baptism_date = baptism_date;
       if (typeof is_married !== 'undefined') jemaat.is_married = is_married;
       if (typeof mom_id !== 'undefined' && mom_id !== '')
-        jemaat.mom_id = Number(mom_id);
+        jemaat.mom_id = mom_id;
       if (typeof dad_id !== 'undefined' && dad_id !== '')
-        jemaat.dad_id = Number(dad_id);
+        jemaat.dad_id = dad_id;
       if (typeof phone_number !== 'undefined')
         jemaat.phone_number = phone_number;
       if (typeof family_id !== 'undefined' && family_id !== '')
-        jemaat.family_id = Number(family_id);
+        jemaat.family_id = family_id;
       if (typeof gender !== 'undefined') jemaat.gender = gender;
       if (typeof couple_id !== 'undefined' && couple_id !== '')
-        jemaat.couple_id = Number(couple_id);
+        jemaat.couple_id = couple_id;
 
       await jemaat.save();
 
@@ -250,7 +191,7 @@ export const JemaatController = {
         code: 200,
         status: 'success',
         message: {
-          id: ['Jemaat berhasil diperbarui'],
+          id: ['Congregation berhasil diperbarui'],
           en: ['Congregation updated successfully'],
         },
         data: jemaat,
@@ -266,9 +207,9 @@ export const JemaatController = {
       });
     }
   },
-  async createJemaat(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     let transaction;
-    const { church } = req;
+    const { church, user } = req;
     try {
       const {
         name,
@@ -283,29 +224,39 @@ export const JemaatController = {
         couple_id,
       } = req.body;
 
-      const rules = {
-        name: 'required|string',
-        birth_date: 'required|date',
-        born_place: 'required|string',
-        gender: 'required|in:male,female',
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields = {
+        name: { value: name, rules: validationRules.name },
+        birth_date: { value: birth_date, rules: validationRules.birth_date },
+        born_place: { value: born_place, rules: validationRules.born_place },
+        gender: { value: gender, rules: validationRules.gender },
       };
 
-      const validation = new Validator(
-        { name, birth_date, born_place, gender },
-        rules,
-      );
-      if (validation.fails())
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Permintaan tidak valid'],
-            en: ['Invalid request'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       transaction = await sequelize.transaction();
-      await Jemaat.create(
+      await Congregation.create(
         {
           name,
           birth_date,
@@ -324,7 +275,7 @@ export const JemaatController = {
 
       // Increment total_jemaat_created for the user
       await User.increment('total_jemaat_created', {
-        where: { id: req.user?.id },
+        where: { id: user?.id },
         transaction,
       });
 
@@ -334,7 +285,7 @@ export const JemaatController = {
         code: 201,
         status: 'success',
         message: {
-          id: ['Jemaat berhasil dibuat'],
+          id: ['Congregation berhasil dibuat'],
           en: ['Congregation created successfully'],
         },
       });
@@ -347,30 +298,36 @@ export const JemaatController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
-  async deleteJemaat(req: Request, res: Response) {
+  async delete(req: Request, res: Response) {
     let transaction;
     try {
       const { user } = req;
       const { id } = req.query;
 
-      const rules = {
-        id: 'required|numeric',
-      };
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validate id field
+      const errors = validateField(id, validationRules.id);
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Permintaan tidak valid'],
-            en: ['Invalid request'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       // Get church for the user
       const church = await Church.findOne({ where: { user_id: user?.id } });
@@ -385,7 +342,7 @@ export const JemaatController = {
         });
       }
 
-      const jemaat = await Jemaat.findOne({
+      const jemaat = await Congregation.findOne({
         where: { id, church_id: church.id },
       });
 
@@ -394,7 +351,7 @@ export const JemaatController = {
           code: 404,
           status: 'error',
           message: {
-            id: ['Jemaat tidak ditemukan'],
+            id: ['Congregation tidak ditemukan'],
             en: ['Congregation not found'],
           },
         });
@@ -406,12 +363,13 @@ export const JemaatController = {
         where: { id: user?.id },
         transaction,
       });
+      transaction.commit();
 
       return res.json({
         code: 200,
         status: 'success',
         message: {
-          id: ['Jemaat berhasil dihapus'],
+          id: ['Congregation berhasil dihapus'],
           en: ['Congregation deleted successfully'],
         },
       });
@@ -424,7 +382,6 @@ export const JemaatController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -432,20 +389,27 @@ export const JemaatController = {
     try {
       const { id } = req.query;
 
-      const rules = {
-        id: 'required|numeric',
-      };
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validate id field
+      const errors = validateField(id, validationRules.id);
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Permintaan tidak valid'],
-            en: ['Invalid request'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       // Get church for the user
       const church = await Church.findOne({ where: { user_id: req.user?.id } });
@@ -461,11 +425,11 @@ export const JemaatController = {
       }
 
       // Check if parent jemaat exists and belongs to current church
-      const parentJemaat = await Jemaat.findOne({
-        where: { id: Number(id), church_id: church.id },
+      const parentCongregation = await Congregation.findOne({
+        where: { id: id, church_id: church.id },
       });
 
-      if (!parentJemaat) {
+      if (!parentCongregation) {
         return res.json({
           code: 404,
           status: 'error',
@@ -477,17 +441,17 @@ export const JemaatController = {
       }
 
       // Get all children (mom_id or dad_id equals to parent id)
-      const children = await Jemaat.findAll({
+      const children = await Congregation.findAll({
         where: {
-          [Op.or]: [{ mom_id: Number(id) }, { dad_id: Number(id) }],
+          [Op.or]: [{ mom_id: id }, { dad_id: id }],
           user_id: req.user?.id, // Ensure children belong to same user
         },
         attributes: [
-          ...Object.keys(Jemaat.rawAttributes),
+          ...Object.keys(Congregation.rawAttributes),
           [
             fn(
               'EXTRACT',
-              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+              sequelize.literal('YEAR FROM AGE("Congregation"."birth_date")'),
             ),
             'age',
           ],
@@ -557,13 +521,13 @@ export const JemaatController = {
         });
       }
 
-      const jemaats = await Jemaat.findAll({
+      const jemaats = await Congregation.findAll({
         where: {
           [Op.and]: [
             sequelize.where(
               sequelize.fn(
                 'EXTRACT',
-                sequelize.literal('MONTH FROM "Jemaat"."birth_date"'),
+                sequelize.literal('MONTH FROM "Congregation"."birth_date"'),
               ),
               month,
             ),
@@ -571,11 +535,11 @@ export const JemaatController = {
           ],
         },
         attributes: [
-          ...Object.keys(Jemaat.rawAttributes),
+          ...Object.keys(Congregation.rawAttributes),
           [
             fn(
               'EXTRACT',
-              sequelize.literal('YEAR FROM AGE("Jemaat"."birth_date")'),
+              sequelize.literal('YEAR FROM AGE("Congregation"."birth_date")'),
             ),
             'age',
           ],

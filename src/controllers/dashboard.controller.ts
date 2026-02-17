@@ -1,14 +1,16 @@
 import { Request, Response } from 'express';
-import { Family, Jemaat, Church } from '../model';
+import { Family, Congregation, Church } from '../model';
 import { QueryTypes } from 'sequelize';
 import sequelize from '../../config/db.config';
 
 export const DashboardController = {
   async dashboard(req: Request, res: Response) {
     try {
+      console.log('masuk sini');
+
       // Count total members
       let { user, church } = req;
-      const totalMembers = await Jemaat.count({
+      const totalMembers = await Congregation.count({
         where: { church_id: church?.id },
       });
 
@@ -18,12 +20,12 @@ export const DashboardController = {
       });
 
       // Count male members
-      const totalMale = await Jemaat.count({
+      const totalMale = await Congregation.count({
         where: { gender: 'male', church_id: church?.id },
       });
 
       // Count female members
-      const totalFemale = await Jemaat.count({
+      const totalFemale = await Congregation.count({
         where: { gender: 'female', church_id: church?.id },
       });
 
@@ -63,7 +65,7 @@ export const DashboardController = {
 
       // Get birthdays this month
       const birthdaysThisMonth = await sequelize.query(
-        `SELECT id, name, birth_date, ${currentYear} - EXTRACT(YEAR FROM birth_date) as age FROM jemaat WHERE church_id = ? AND EXTRACT(MONTH FROM birth_date) = ? ORDER BY birth_date ASC`,
+        `SELECT id, name, birth_date, ${currentYear} - EXTRACT(YEAR FROM birth_date) as age FROM congregation WHERE church_id = ? AND EXTRACT(MONTH FROM birth_date) = ? ORDER BY birth_date ASC`,
         {
           replacements: [church?.id, currentMonth],
           type: QueryTypes.SELECT,
@@ -90,6 +92,8 @@ export const DashboardController = {
         },
       });
     } catch (error) {
+      console.log(error, '???');
+
       return res.json({
         code: 500,
         status: 'error',

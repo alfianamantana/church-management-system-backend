@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import '../config/db.config';
-import { User, Category, PriorityNeed, Church, RoleAccount } from './model';
+import { User, PriorityNeed, UserRole, SubscribeType } from './model';
 import bcrypt from 'bcrypt';
 
 async function seedSuperadmin() {
@@ -18,42 +18,33 @@ async function seedSuperadmin() {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  // Create superadmin role if it doesn't exist
+  let superadminRole = await UserRole.findOne({
+    where: { name: 'superadmin' },
+  });
+  if (!superadminRole) {
+    superadminRole = await UserRole.create({ name: 'superadmin' });
+  }
+
+  // Create full subscription type if it doesn't exist
+  let fullSubscribeType = await SubscribeType.findOne({
+    where: { name: 'full' },
+  });
+  if (!fullSubscribeType) {
+    fullSubscribeType = await SubscribeType.create({ name: 'full' });
+  }
+
   await User.create({
     name,
     email,
     password: hashedPassword,
     phone_number,
-    role: 'superadmin',
-    subscribe_type: 'full',
+    role_id: superadminRole.id,
+    subscribe_type_id: fullSubscribeType.id,
     unique_key: 'alfianganteng',
-    is_trial_account: false,
-    is_main_account: true,
     is_verified: true,
   });
   console.log('Superadmin seeded!');
-}
-
-async function seedCategories() {
-  const categories = [
-    { name: 'Donasi', type: 'income' as const },
-    { name: 'Persembahan', type: 'income' as const },
-    { name: 'Pengeluaran Kantor', type: 'expense' as const },
-    { name: 'Pengeluaran Acara', type: 'expense' as const },
-    { name: 'Pengeluaran Makanan', type: 'expense' as const },
-    { name: 'Pengeluaran Transportasi', type: 'expense' as const },
-  ];
-
-  for (const cat of categories) {
-    const existing = await Category.findOne({
-      where: { name: cat.name },
-    });
-    if (!existing) {
-      await Category.create(cat);
-      console.log(`Category "${cat.name}" seeded!`);
-    } else {
-      console.log(`Category "${cat.name}" already exists.`);
-    }
-  }
 }
 
 async function seedPriorityNeeds() {
@@ -105,7 +96,27 @@ async function seedPriorityNeeds() {
   }
 }
 
-async function seedRoleAccounts() {
+async function seedSubscribeTypes() {
+  const subscribeTypes = [
+    { name: 'bibit' },
+    { name: 'bertumbuh' },
+    { name: 'full' },
+  ];
+
+  for (const type of subscribeTypes) {
+    const existing = await SubscribeType.findOne({
+      where: { name: type.name },
+    });
+    if (!existing) {
+      await SubscribeType.create(type);
+      console.log(`Subscribe type "${type.name}" seeded!`);
+    } else {
+      console.log(`Subscribe type "${type.name}" already exists.`);
+    }
+  }
+}
+
+async function seedUserRole() {
   const churchPositions = [
     'pastor',
     'minister',
@@ -135,23 +146,13 @@ async function seedRoleAccounts() {
     'altar_server',
   ];
 
-  // Get superadmin user
-  const superadmin = await User.findOne({
-    where: { role: 'superadmin' },
-  });
-  if (!superadmin) {
-    console.log('Superadmin not found, skipping role account seeding.');
-    return;
-  }
-
   for (const position of churchPositions) {
-    const existing = await RoleAccount.findOne({
-      where: { name: position, user_id: superadmin.id },
+    const existing = await UserRole.findOne({
+      where: { name: position },
     });
     if (!existing) {
-      await RoleAccount.create({
+      await UserRole.create({
         name: position,
-        user_id: superadmin.id,
       });
       console.log(`Role account "${position}" seeded!`);
     } else {
@@ -162,10 +163,12 @@ async function seedRoleAccounts() {
 
 async function main() {
   try {
+    console.log('Database sync completed...');
+
+    await seedSubscribeTypes();
     await seedSuperadmin();
-    await seedCategories();
     await seedPriorityNeeds();
-    await seedRoleAccounts();
+    await seedUserRole();
     console.log('Seeding completed!');
   } catch (error) {
     console.error('Seeding failed:', error);

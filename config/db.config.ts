@@ -2,7 +2,7 @@ import { Sequelize } from 'sequelize-typescript';
 import {
   User,
   Auth,
-  Jemaat,
+  Congregation,
   Event,
   Member,
   Role,
@@ -15,7 +15,10 @@ import {
   Church,
   PriorityNeed,
   UserPriorityNeed,
-  RoleAccount,
+  UserRole,
+  UserOtp,
+  UserChurch,
+  SubscribeType,
 } from '../src/model';
 
 const sequelize = new Sequelize({
@@ -26,6 +29,7 @@ const sequelize = new Sequelize({
   port: Number(process.env.DB_PORT!),
   dialect: 'postgres',
   dialectOptions: {
+    useUTC: true,
     connectTimeout: 30000,
     ssl:
       process.env.SSL === 'false'
@@ -41,16 +45,16 @@ const sequelize = new Sequelize({
     acquire: 30000,
     idle: 10000,
   },
+  timezone: '+00:00',
   define: {
-    charset: 'utf8mb4',
-    collate: 'utf8mb4_0900_ai_ci',
+    // PostgreSQL doesn't use charset/collate in the same way
   },
   logging: false,
   models: [
     User,
     Category,
     Family,
-    Jemaat,
+    Congregation,
     Member,
     Role,
     Schedule,
@@ -62,7 +66,10 @@ const sequelize = new Sequelize({
     Church,
     PriorityNeed,
     UserPriorityNeed,
-    RoleAccount,
+    UserRole,
+    UserOtp,
+    UserChurch,
+    SubscribeType,
   ],
 });
 

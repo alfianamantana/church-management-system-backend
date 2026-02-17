@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { User, Auth } from '../model';
+import { User, Auth, UserRole, SubscribeType } from '../model';
 
 declare global {
   namespace Express {
@@ -40,7 +40,13 @@ const auth_superadmin = async (
         message: 'Unauthorized: Token has expired',
       });
     }
-    const user = await User.findOne({ where: { id: authRecord.user_id } });
+    const user = await User.findOne({
+      where: { id: authRecord.user_id },
+      include: [
+        { model: UserRole, as: 'userRole' },
+        { model: SubscribeType, as: 'subscribeType' },
+      ],
+    });
     if (!user) {
       return res.json({
         code: 401,
@@ -57,13 +63,19 @@ const auth_superadmin = async (
       });
     }
 
-    if (user.role !== 'superadmin') {
+    if (user.userRole?.name !== 'superadmin') {
       return res.json({
         code: 403,
         status: 'error',
         message: 'Forbidden role',
       });
     }
+
+    // Set subscribe_type property for backward compatibility
+    if (user.subscribeType) {
+      (user as any).subscribe_type = user.subscribeType.name;
+    }
+
     req.user = user;
 
     next();

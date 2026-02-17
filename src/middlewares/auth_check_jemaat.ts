@@ -1,12 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
+import { User } from '../model';
 const auth_check_jemaat = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    let { user } = req;
-    if (user?.subscribe_type === 'bibit' && user.total_jemaat_created >= 100) {
+    const userId = req.user?.id;
+    const user = await User.findOne({
+      where: { id: userId },
+      include: ['subscribeType'],
+    });
+    if (
+      user?.subscribeType?.name === 'bibit' &&
+      user.total_jemaat_created >= 100
+    ) {
       return res.json({
         code: 403,
         status: 'error',
@@ -20,7 +28,7 @@ const auth_check_jemaat = async (
         },
       });
     } else if (
-      user?.subscribe_type === 'bertumbuh' &&
+      user?.subscribeType?.name === 'bertumbuh' &&
       user.total_jemaat_created >= 500
     ) {
       return res.json({

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Church } from '../model';
+import { Church, UserChurch } from '../model';
 
 declare global {
   namespace Express {
@@ -11,11 +11,17 @@ declare global {
 
 const auth_church = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log('kesin');
+
     const user = req.user;
-    const church = req.headers.church as string;
-    const finded_church = await Church.findOne({ where: { id: church } });
+    const churchId = req.headers.church as string;
 
-    if (!finded_church) {
+    const userChurch = await UserChurch.findOne({
+      where: { user_id: user?.id, church_id: churchId },
+      include: [{ model: Church, as: 'church' }],
+    });
+
+    if (!userChurch) {
       return res.json({
         code: 401,
         status: 'error',
@@ -26,17 +32,7 @@ const auth_church = async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    if (finded_church.user_id !== user?.id) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: {
-          id: ['Tidak diizinkan'],
-          en: ['Unauthorize'],
-        },
-      });
-    }
-    (req as Express.Request).church = finded_church;
+    (req as Express.Request).church = userChurch.church;
     next();
   } catch (error) {
     return res.json({

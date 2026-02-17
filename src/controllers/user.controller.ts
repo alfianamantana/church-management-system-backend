@@ -1,9 +1,26 @@
 import { Request, Response } from 'express';
-import Validator from 'validatorjs';
-import { User, Auth, PriorityNeed, UserPriorityNeed, Church } from '../model';
+import {
+  User,
+  Auth,
+  PriorityNeed,
+  UserPriorityNeed,
+  Church,
+  UserOtp,
+  UserRole,
+  SubscribeType,
+} from '../model';
+import sequelize from '../../config/db.config';
+import { Transaction } from 'sequelize';
 import bcrypt from 'bcrypt';
 import { generateToken } from '../helpers';
+import { validateField, getValidationRules } from '../helpers';
 import { Op } from 'sequelize';
+import {
+  validateRequired,
+  validateRequiredEn,
+  validateNumeric,
+  validateNumericEn,
+} from '../helpers';
 
 export const UserController = {
   async getProfile(req: Request, res: Response) {
@@ -45,14 +62,20 @@ export const UserController = {
   // Get all users with pagination and search
   async getUsers(req: Request, res: Response) {
     try {
+      const { church } = req;
+
       let { page = 1, limit = 10, q } = req.query;
       page = Number(page) || 1;
       limit = Number(limit) || 10;
       const offset = (page - 1) * limit;
 
-      let whereClause: any = {};
+      let whereClause: any = {
+        church_id: church?.id,
+      };
+
       if (q) {
         whereClause = {
+          ...whereClause,
           [Op.or]: [
             { name: { [Op.iLike]: `%${q}%` } },
             { email: { [Op.iLike]: `%${q}%` } },
@@ -65,6 +88,7 @@ export const UserController = {
         limit,
         where: whereClause,
         attributes: { exclude: ['password'] },
+        include: [{ model: UserRole, as: 'userRole' }],
         order: [['created_at', 'DESC']],
       });
 
@@ -100,17 +124,31 @@ export const UserController = {
         subscribe_type,
       } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validation
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+      const errors = validateField(id, {
+        id: [
+          { validator: validateRequired, args: ['id'] },
+          { validator: validateNumeric, args: ['id'] },
+        ],
+        en: [
+          { validator: validateRequiredEn, args: ['id'] },
+          { validator: validateNumericEn, args: ['id'] },
+        ],
+      });
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       const user = await User.findOne({ where: { id: Number(id) } });
       if (!user) {
@@ -143,12 +181,38 @@ export const UserController = {
       if (name) user.name = name;
       if (phone_number) user.phone_number = phone_number;
       if (subscribe_until !== undefined) user.subscribe_until = subscribe_until;
-      if (role) user.role = role;
-      if (subscribe_type) user.subscribe_type = subscribe_type;
+      if (role) {
+        // Find or create role record
+        let roleRecord = await UserRole.findOne({ where: { name: role } });
+        if (!roleRecord) {
+          roleRecord = await UserRole.create({ name: role });
+        }
+        user.role_id = roleRecord.id;
+      }
+      if (subscribe_type) {
+        // Find or create subscribe type record
+        let subscribeTypeRecord = await SubscribeType.findOne({
+          where: { name: subscribe_type },
+        });
+        if (!subscribeTypeRecord) {
+          subscribeTypeRecord = await SubscribeType.create({
+            name: subscribe_type,
+          });
+        }
+        user.subscribe_type_id = subscribeTypeRecord.id;
+      }
 
       await user.save();
 
-      const { password: _, ...userData } = user.get({ plain: true });
+      // Reload user with role and subscribe type relationships
+      const updatedUser = await User.findOne({
+        where: { id: user.id },
+        attributes: { exclude: ['password'] },
+        include: [
+          { model: UserRole, as: 'userRole' },
+          { model: SubscribeType, as: 'subscribeType' },
+        ],
+      });
 
       return res.json({
         code: 200,
@@ -157,7 +221,7 @@ export const UserController = {
           id: ['Pengguna berhasil diperbarui'],
           en: ['User updated successfully'],
         },
-        data: userData,
+        data: updatedUser,
       });
     } catch (err) {
       return res.json({
@@ -177,19 +241,36 @@ export const UserController = {
     try {
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validation
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+      const errors = validateField(id, {
+        id: [
+          { validator: validateRequired, args: ['id'] },
+          { validator: validateNumeric, args: ['id'] },
+        ],
+        en: [
+          { validator: validateRequiredEn, args: ['id'] },
+          { validator: validateNumericEn, args: ['id'] },
+        ],
+      });
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
-      const user = await User.findOne({ where: { id: Number(id) } });
+      const user = await User.findOne({
+        where: { id: Number(id) },
+        include: [{ model: UserRole, as: 'userRole' }],
+      });
       if (!user) {
         return res.json({
           code: 404,
@@ -202,7 +283,7 @@ export const UserController = {
       }
 
       // Prevent deletion of superadmin
-      if (user.role === 'superadmin') {
+      if (user.userRole?.name === 'superadmin') {
         return res.json({
           code: 403,
           status: 'error',
@@ -241,22 +322,29 @@ export const UserController = {
       let { email } = req.user as User;
       const { current_password, new_password } = req.body;
 
-      const rules = {
-        current_password: 'required|string',
-        new_password: 'required|string|min:6',
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+      const fields = {
+        current_password: {
+          value: current_password,
+          rules: validationRules.password,
+        },
+        new_password: { value: new_password, rules: validationRules.password },
       };
-
-      const validation = new Validator(
-        { current_password, new_password },
-        rules,
-      );
-      if (validation.fails()) {
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
@@ -307,96 +395,33 @@ export const UserController = {
       });
     }
   },
-  async createUser(req: Request, res: Response) {
-    try {
-      console.log(req.body, 'bodss');
-
-      // const { name, email, password, phone_number, role, subscribe_type } =
-      //   req.body;
-
-      // const subscribe_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-      // const unique_key = Math.random().toString(36).substring(2, 15);
-      // const rules = {
-      //   name: 'required|string',
-      //   email: 'required|email',
-      //   password: 'required|string',
-      //   phone_number: 'required|string',
-      //   role: 'string|in:superadmin,user',
-      //   subscribe_type: 'required|string|in:bibit,bertumbuh,full',
-      // };
-
-      // const validation = new Validator(
-      //   { name, email, password, phone_number, role, subscribe_type },
-      //   rules,
-      // );
-      // if (validation.fails()) {
-      //   return res.json({
-      //     code: 400,
-      //     status: 'error',
-      //     message: {
-      //   id: ['Validasi gagal'],
-      // en: ['Validation failed']}
-      //   });
-      // }
-
-      // const existing = await User.findOne({ where: { email } });
-      // if (existing) {
-      //   return res.json({
-      //     code: 400,
-      //     status: 'error',
-      //     message: {
-      //       id: ['Email sudah ada'],
-      //       en: ['Email already exists'],
-      //     },
-      //   });
-      // }
-
-      // const hashedPassword = await bcrypt.hash(password, 10);
-
-      // await User.create({
-      //   name,
-      //   email,
-      //   password: hashedPassword,
-      //   phone_number,
-      //   subscribe_until,
-      //   role: role || undefined,
-      //   subscribe_type,
-      //   unique_key,
-      // });
-
-      // return res.json({
-      //   code: 201,
-      //   status: 'success',
-      //   message: {
-      //     id: ['Pengguna berhasil dibuat'],
-      //     en: ['User created successfully'],
-      //   },
-      // });
-    } catch (err) {
-      return res.json({
-        code: 500,
-        status: 'error',
-        message: {
-          id: ['Kesalahan server'],
-          en: ['Internal server error'],
-        },
-      });
-    }
-  },
   async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
-      const rules = { email: 'required|email', password: 'required|string' };
-      const validation = new Validator({ email, password }, rules);
-      if (validation.fails())
+
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+      const fields = {
+        email: { value: email, rules: validationRules.email },
+        password: { value: password, rules: validationRules.password },
+      };
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       const userInstance = await User.findOne({
         where: { email },
@@ -408,8 +433,8 @@ export const UserController = {
           code: 400,
           status: 'error',
           message: {
-            id: ['Kredensial tidak valid'],
-            en: ['Invalid credentials'],
+            id: ['Email atau kata sandi salah'],
+            en: ['Email or password is incorrect'],
           },
         });
 
@@ -422,8 +447,12 @@ export const UserController = {
           code: 403,
           status: 'error',
           message: {
-            id: ['Langganan kedaluwarsa'],
-            en: ['Subscription expired'],
+            id: [
+              'Langganan kedaluwarsa, silakan perbarui untuk terus menggunakan layanan',
+            ],
+            en: [
+              'Subscription expired, please renew to continue using the service',
+            ],
           },
         });
       }
@@ -435,8 +464,8 @@ export const UserController = {
           code: 400,
           status: 'error',
           message: {
-            id: ['Kredensial tidak valid'],
-            en: ['Invalid credentials'],
+            id: ['Email atau kata sandi salah'],
+            en: ['Email or password is incorrect'],
           },
         });
 
@@ -478,38 +507,62 @@ export const UserController = {
   },
 
   async register(req: Request, res: Response) {
+    let transaction: Transaction | null = null;
     try {
-      const { name, email, password, phone_number, priority_needs, country } =
-        req.body;
+      transaction = await sequelize.transaction();
+      const { email, password, phone_number, priority_needs } = req.body;
 
-      const rules = {
-        name: 'required|string|min:2|max:255',
-        email: 'required|email',
-        password: 'required|string|min:6',
-        phone_number: 'required|string|min:10|max:15',
-        priority_needs: 'array',
-        'priority_needs.*': 'numeric',
-        country: 'required|string|min:2|max:255',
+      const name = req.body.name?.trim();
+
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields = {
+        name: { value: name, rules: validationRules.name },
+        email: { value: email, rules: validationRules.email },
+        password: { value: password, rules: validationRules.password },
+        phone_number: {
+          value: phone_number,
+          rules: validationRules.phone_number,
+        },
       };
 
-      const validation = new Validator(
-        { name, email, password, phone_number, priority_needs, country },
-        rules,
-      );
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
 
-      if (validation.fails()) {
+      // Validate priority_needs if provided
+      if (priority_needs !== undefined) {
+        const errors = validateField(
+          priority_needs,
+          validationRules.priority_needs,
+        );
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      }
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
 
       // Check if email already exists
-      const existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({
+        where: { email },
+        transaction,
+      });
       if (existingUser) {
         return res.json({
           code: 400,
@@ -525,6 +578,7 @@ export const UserController = {
       if (priority_needs && priority_needs.length > 0) {
         const validPriorityNeeds = await PriorityNeed.findAll({
           where: { id: { [Op.in]: priority_needs } },
+          transaction,
         });
 
         if (validPriorityNeeds.length !== priority_needs.length) {
@@ -548,41 +602,88 @@ export const UserController = {
         Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      // Create user
-      const newUser = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        phone_number,
-        subscribe_until,
-        role: 'user',
-        subscribe_type: 'bibit', // Default to trial
-        unique_key,
-        is_trial_account: true,
-        is_main_account: true,
-        otp: otp,
-        is_verified: false,
-        country,
+      // Create user role if it doesn't exist
+      let userRole = await UserRole.findOne({
+        where: { name: 'superadmin' },
+        transaction,
       });
+      if (!userRole) {
+        userRole = await UserRole.create(
+          { name: 'superadmin' },
+          { transaction },
+        );
+      }
+
+      // Create subscribe type if it doesn't exist
+      let bibitSubscribeType = await SubscribeType.findOne({
+        where: { name: 'bibit' },
+        transaction,
+      });
+      if (!bibitSubscribeType) {
+        bibitSubscribeType = await SubscribeType.create(
+          { name: 'bibit' },
+          { transaction },
+        );
+      }
+
+      // Create user
+      const newUser = await User.create(
+        {
+          name,
+          email,
+          password: hashedPassword,
+          phone_number,
+          subscribe_until,
+          role_id: userRole.id,
+          subscribe_type_id: bibitSubscribeType.id, // Default to trial
+          unique_key,
+          is_verified: false,
+        },
+        { transaction },
+      );
+
+      // Create OTP record
+      const expiredAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await UserOtp.create(
+        {
+          user_id: newUser.id,
+          code: otp,
+          type: 'activation',
+          expired_at: expiredAt,
+        },
+        { transaction },
+      );
 
       // Save priority needs if provided
       if (priority_needs && priority_needs.length > 0) {
-        const userPriorityNeeds = priority_needs.map((priorityId: number) => ({
+        const validPriorityNeeds = await PriorityNeed.findAll({
+          where: { id: { [Op.in]: priority_needs } },
+          transaction,
+        });
+
+        const userPriorityNeeds = validPriorityNeeds.map((priorityNeed) => ({
           user_id: newUser.id,
-          priority_need_id: priorityId,
+          priority_need_id: priorityNeed.id,
         }));
 
-        await UserPriorityNeed.bulkCreate(userPriorityNeeds);
+        await UserPriorityNeed.bulkCreate(userPriorityNeeds, { transaction });
       }
 
       // Generate token and create auth record
       const token = generateToken(25);
       const valid_until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-      await Auth.create({ user_id: newUser.id, token, valid_until });
+      await Auth.create(
+        {
+          user_id: newUser.id,
+          token,
+          valid_until,
+        },
+        { transaction },
+      );
 
       // Get user data without password
       const { password: _, ...userData } = newUser.get({ plain: true });
+      await transaction!.commit();
 
       return res.json({
         code: 201,
@@ -595,6 +696,10 @@ export const UserController = {
         data: userData,
       });
     } catch (err) {
+      if (transaction) {
+        await transaction.rollback();
+      }
+
       return res.json({
         code: 500,
         status: 'error',
@@ -611,19 +716,31 @@ export const UserController = {
     try {
       const { email, otp } = req.body;
 
-      const rules = {
-        email: 'required|email',
-        otp: 'required|string|size:6',
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields = {
+        email: { value: email, rules: validationRules.email },
+        otp: { value: otp, rules: validationRules.otp },
       };
 
-      const validation = new Validator({ email, otp }, rules);
-      if (validation.fails()) {
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
@@ -651,7 +768,17 @@ export const UserController = {
         });
       }
 
-      if (user.otp !== otp) {
+      // Find the latest activation OTP
+      const userOtp = await UserOtp.findOne({
+        where: {
+          user_id: user.id,
+          type: 'activation',
+          expired_at: { [Op.gt]: new Date() },
+        },
+        order: [['created_at', 'DESC']],
+      });
+
+      if (!userOtp || userOtp.code !== otp) {
         return res.json({
           code: 400,
           status: 'error',
@@ -664,8 +791,10 @@ export const UserController = {
 
       // Verify the account
       user.is_verified = true;
-      user.otp = undefined; // Clear OTP after verification
       await user.save();
+
+      // Delete the used OTP
+      await userOtp.destroy();
 
       return res.json({
         code: 200,
@@ -683,27 +812,34 @@ export const UserController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async resendOTP(req: Request, res: Response) {
+    let transaction: Transaction | null = null;
     try {
+      transaction = await sequelize.transaction();
       const { email } = req.body;
 
-      const rules = {
-        email: 'required|email',
-      };
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ email }, rules);
-      if (validation.fails()) {
+      // Validate email field
+      const errors = validateField(email, validationRules.email);
+      if (errors.id) errorsId.push(errors.id);
+      if (errors.en) errorsEn.push(errors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
@@ -734,9 +870,28 @@ export const UserController = {
       // Generate new OTP
       const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // Update user's OTP
-      user.otp = newOtp;
-      await user.save();
+      // Delete existing activation OTPs
+      await UserOtp.destroy({
+        where: {
+          user_id: user.id,
+          type: 'activation',
+        },
+        transaction,
+      });
+
+      // Create new OTP record
+      const expiredAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await UserOtp.create(
+        {
+          user_id: user.id,
+          code: newOtp,
+          type: 'activation',
+          expired_at: expiredAt,
+        },
+        { transaction },
+      );
+
+      await transaction.commit();
 
       return res.json({
         code: 200,
@@ -747,6 +902,10 @@ export const UserController = {
         },
       });
     } catch (err) {
+      if (transaction) {
+        await transaction.rollback();
+      }
+
       return res.json({
         code: 500,
         status: 'error',

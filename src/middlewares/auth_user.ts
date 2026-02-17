@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { User, Auth, Church } from '../model';
+import { User, Auth, Church, SubscribeType } from '../model';
 
 declare global {
   namespace Express {
@@ -46,7 +46,11 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
         },
       });
     }
-    const user = await User.findOne({ where: { id: authRecord.user_id } });
+    const user = await User.findOne({
+      where: { id: authRecord.user_id },
+      include: [{ model: SubscribeType, as: 'subscribeType' }],
+    });
+
     if (!user) {
       return res.json({
         code: 401,
@@ -68,6 +72,12 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
         },
       });
     }
+
+    // Set subscribe_type property for backward compatibility
+    if (user.subscribeType) {
+      (user as any).subscribe_type = user.subscribeType.name;
+    }
+
     (req as Express.Request).user = user;
     next();
   } catch (error) {

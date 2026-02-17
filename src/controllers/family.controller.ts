@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Family, Jemaat, Church } from '../model';
+import { Family, Congregation, Church } from '../model';
 import Validator from 'validatorjs';
 import { Op, where, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
@@ -22,14 +22,14 @@ export const FamilyController = {
 
       if (member) {
         const attributes: (string | [any, string])[] = [
-          ...Object.keys(Jemaat.rawAttributes),
+          ...Object.keys(Congregation.rawAttributes),
           [
             fn('EXTRACT', sequelize.literal('YEAR FROM AGE(birth_date)')),
             'age',
           ],
         ];
         includeClause.push({
-          model: Jemaat,
+          model: Congregation,
           as: 'jemaats',
           attributes,
         });
@@ -51,7 +51,7 @@ export const FamilyController = {
       let whereClause: any = { church_id: church.id }; // Add church filter
 
       if (id) {
-        whereClause = { ...whereClause, id: Number(id) };
+        whereClause = { ...whereClause, id: id };
       }
 
       if (q) {
@@ -131,7 +131,7 @@ export const FamilyController = {
 
       // Update jemaat family_id
       if (jemaat_ids && jemaat_ids.length > 0) {
-        await Jemaat.update(
+        await Congregation.update(
           { family_id: family.id },
           { where: { id: jemaat_ids, church_id: church.id } }, // Add church filter
         );
@@ -165,7 +165,7 @@ export const FamilyController = {
       const id = req.query.id as string;
       const { name, jemaat_ids } = req.body as {
         name: string;
-        jemaat_ids?: number[];
+        jemaat_ids?: string[];
       };
 
       const validator = new Validator(req.body, {
@@ -213,24 +213,24 @@ export const FamilyController = {
 
       // Handle jemaat updates
       if (jemaat_ids !== undefined) {
-        const currentJemaat = await Jemaat.findAll({
+        const currentCongregation = await Congregation.findAll({
           where: { family_id: family.id, church_id: church.id }, // Add church filter
         });
-        const currentIds = currentJemaat.map((j) => j.id);
+        const currentIds = currentCongregation.map((j) => j.id);
         const selectedIds = jemaat_ids || [];
 
         const toAdd = selectedIds.filter((id) => !currentIds.includes(id));
         const toRemove = currentIds.filter((id) => !selectedIds.includes(id));
 
         if (toAdd.length > 0) {
-          await Jemaat.update(
+          await Congregation.update(
             { family_id: family.id },
             { where: { id: toAdd, church_id: church.id } }, // Add church filter
           );
         }
 
         if (toRemove.length > 0) {
-          await Jemaat.update(
+          await Congregation.update(
             { family_id: null },
             { where: { id: toRemove, church_id: church.id } },
           ); // Add user filter
@@ -278,7 +278,7 @@ export const FamilyController = {
       }
 
       const family = await Family.findOne({
-        where: { id: Number(id), church_id: church.id },
+        where: { id: id, church_id: church.id },
       });
       if (!family) {
         return res.json({
