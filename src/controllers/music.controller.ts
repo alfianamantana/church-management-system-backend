@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { Member, Role, Schedule, ServiceAssignment } from '../model';
-import Validator from 'validatorjs';
+import {
+  validateField,
+  getValidationRules,
+  validateArray,
+  validateArrayEn,
+} from '../helpers';
 import { Op, Includeable } from 'sequelize';
 
 interface IScheduleInput {
@@ -58,21 +63,41 @@ export const MusicController = {
       const { church } = req;
       const { name, phone } = req.body;
 
-      const rules = {
-        name: 'required|string',
-        phone: 'string',
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields: any = {
+        name: { value: name, rules: validationRules.name },
       };
 
-      const validation = new Validator({ name, phone }, rules);
-      if (validation.fails())
+      // Optional validations
+      if (phone !== undefined) {
+        fields.phone = { value: phone, rules: validationRules.phone_number };
+      }
+
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(
+          (config as any).value,
+          (config as any).rules,
+        );
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            en: ['Validation failed'],
-            id: ['Validasi gagal'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       await Member.create({ church_id: church?.id, name, phone });
 
@@ -102,17 +127,40 @@ export const MusicController = {
       const { id } = req.query;
       const { name, phone } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate id
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      // Optional validations
+      if (name !== undefined) {
+        const nameErrors = validateField(name, validationRules.name);
+        if (nameErrors.id) errorsId.push(nameErrors.id);
+        if (nameErrors.en) errorsEn.push(nameErrors.en);
+      }
+
+      if (phone !== undefined) {
+        const phoneErrors = validateField(phone, validationRules.phone_number);
+        if (phoneErrors.id) errorsId.push(phoneErrors.id);
+        if (phoneErrors.en) errorsEn.push(phoneErrors.en);
+      }
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['ID anggota diperlukan dan harus berupa angka'],
-            en: ['Member ID is required and must be a number'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       const member = await Member.findOne({
         where: { id: Number(id), church_id: church?.id },
@@ -156,25 +204,40 @@ export const MusicController = {
 
   async deleteMember(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const member = await Member.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
       });
       if (!member) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Member not found'],
+          message: {
+            id: ['Anggota tidak ditemukan'],
+            en: ['Member not found'],
+          },
         });
       }
 
@@ -196,7 +259,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -248,14 +310,25 @@ export const MusicController = {
       const { church } = req;
       const { role_name } = req.body;
 
-      const rules = { role_name: 'required|string' };
-      const validation = new Validator({ role_name }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const roleNameErrors = validateField(role_name, validationRules.name);
+      if (roleNameErrors.id) errorsId.push(roleNameErrors.id);
+      if (roleNameErrors.en) errorsEn.push(roleNameErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       await Role.create({ church_id: church?.id, role_name });
 
@@ -275,33 +348,53 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async updateRole(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
       const { role_name } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (role_name !== undefined) {
+        const roleNameErrors = validateField(role_name, validationRules.name);
+        if (roleNameErrors.id) errorsId.push(roleNameErrors.id);
+        if (roleNameErrors.en) errorsEn.push(roleNameErrors.en);
+      }
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const role = await Role.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
       });
       if (!role) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Role not found'],
+          message: {
+            id: ['Peran tidak ditemukan'],
+            en: ['Role not found'],
+          },
         });
       }
 
@@ -325,32 +418,46 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async deleteRole(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const role = await Role.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
       });
       if (!role) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Role not found'],
+          message: {
+            id: ['Peran tidak ditemukan'],
+            en: ['Role not found'],
+          },
         });
       }
 
@@ -372,7 +479,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -446,19 +552,31 @@ export const MusicController = {
 
   async getSchedule(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const schedule = await Schedule.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
         include: [
           {
             model: ServiceAssignment,
@@ -475,7 +593,10 @@ export const MusicController = {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Schedule not found'],
+          message: {
+            id: ['Jadwal tidak ditemukan'],
+            en: ['Schedule not found'],
+          },
         });
       }
 
@@ -492,7 +613,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -503,27 +623,51 @@ export const MusicController = {
       const { church } = req;
       const { schedules = [] } = req.body;
 
-      const rules = {
-        schedules: 'required|array',
-        'schedules.*.service_name': 'required|string',
-        'schedules.*.scheduled_at': 'required|date',
-      };
-      const validation = new Validator({ schedules }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate schedules array
+      const schedulesErrors = validateField(schedules, {
+        id: [{ validator: validateArray, args: ['jadwal'] }],
+        en: [{ validator: validateArrayEn, args: ['schedules'] }],
+      });
+      if (schedulesErrors.id) errorsId.push(schedulesErrors.id);
+      if (schedulesErrors.en) errorsEn.push(schedulesErrors.en);
+
+      // Validate each schedule item
+      for (let i = 0; i < schedules.length; i++) {
+        const sch = schedules[i];
+        const serviceNameErrors = validateField(
+          sch.service_name,
+          validationRules.name,
+        );
+        if (serviceNameErrors.id)
+          errorsId.push(`Jadwal ${i + 1}: ${serviceNameErrors.id}`);
+        if (serviceNameErrors.en)
+          errorsEn.push(`Schedule ${i + 1}: ${serviceNameErrors.en}`);
+
+        const scheduledAtErrors = validateField(
+          sch.scheduled_at,
+          validationRules.date,
+        );
+        if (scheduledAtErrors.id)
+          errorsId.push(`Jadwal ${i + 1}: ${scheduledAtErrors.id}`);
+        if (scheduledAtErrors.en)
+          errorsEn.push(`Schedule ${i + 1}: ${scheduledAtErrors.en}`);
+      }
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: [
-              'Validasi gagal',
-              'Pastikan semua jadwal memiliki nama dan tanggal yang valid',
-            ],
-            en: [
-              'Validation failed',
-              'Ensure all schedules have valid name and date',
-            ],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       transaction = await Schedule.sequelize?.transaction();
 
@@ -587,27 +731,51 @@ export const MusicController = {
       const { church } = req;
       const { schedules = [] } = req.body;
 
-      const rules = {
-        schedules: 'required|array',
-        'schedules.*.service_name': 'required|string',
-        'schedules.*.scheduled_at': 'required|date',
-      };
-      const validation = new Validator({ schedules }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate schedules array
+      const schedulesErrors = validateField(schedules, {
+        id: [{ validator: validateArray, args: ['jadwal'] }],
+        en: [{ validator: validateArrayEn, args: ['schedules'] }],
+      });
+      if (schedulesErrors.id) errorsId.push(schedulesErrors.id);
+      if (schedulesErrors.en) errorsEn.push(schedulesErrors.en);
+
+      // Validate each schedule item
+      for (let i = 0; i < schedules.length; i++) {
+        const sch = schedules[i];
+        const serviceNameErrors = validateField(
+          sch.service_name,
+          validationRules.name,
+        );
+        if (serviceNameErrors.id)
+          errorsId.push(`Jadwal ${i + 1}: ${serviceNameErrors.id}`);
+        if (serviceNameErrors.en)
+          errorsEn.push(`Schedule ${i + 1}: ${serviceNameErrors.en}`);
+
+        const scheduledAtErrors = validateField(
+          sch.scheduled_at,
+          validationRules.date,
+        );
+        if (scheduledAtErrors.id)
+          errorsId.push(`Jadwal ${i + 1}: ${scheduledAtErrors.id}`);
+        if (scheduledAtErrors.en)
+          errorsEn.push(`Schedule ${i + 1}: ${scheduledAtErrors.en}`);
+      }
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: [
-              'Validasi gagal',
-              'Pastikan semua jadwal memiliki nama dan tanggal yang valid',
-            ],
-            en: [
-              'Validation failed',
-              'Ensure all schedules have valid name and date',
-            ],
+            id: errorsId,
+            en: errorsEn,
           },
         });
+      }
 
       transaction = await Schedule.sequelize?.transaction();
 
@@ -700,25 +868,40 @@ export const MusicController = {
 
   async deleteSchedule(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const schedule = await Schedule.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id), church_id: church?.id },
       });
       if (!schedule) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Schedule not found'],
+          message: {
+            id: ['Jadwal tidak ditemukan'],
+            en: ['Schedule not found'],
+          },
         });
       }
 
@@ -740,7 +923,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
@@ -748,6 +930,7 @@ export const MusicController = {
   // ServiceAssignment CRUD with conflict check
   async getServiceAssignments(req: Request, res: Response) {
     try {
+      const { church } = req;
       let { page = 1, limit = 10 } = req.query;
       page = Number(page) || 1;
       limit = Number(limit) || 10;
@@ -756,9 +939,13 @@ export const MusicController = {
       const { count, rows } = await ServiceAssignment.findAndCountAll({
         offset,
         limit,
-        where: { user_id: req.user?.id },
         include: [
-          { model: Schedule, as: 'schedule' },
+          {
+            model: Schedule,
+            as: 'schedule',
+            where: { church_id: church?.id },
+            required: true,
+          },
           { model: Member, as: 'member' },
           { model: Role, as: 'role' },
         ],
@@ -779,65 +966,85 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async createServiceAssignment(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { schedule_id, member_id, role_id } = req.body;
 
-      const rules = {
-        schedule_id: 'required|numeric',
-        member_id: 'required|numeric',
-        role_id: 'required|numeric',
-      };
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator(
-        { schedule_id, member_id, role_id },
-        rules,
-      );
-      if (validation.fails())
+      const scheduleIdErrors = validateField(schedule_id, validationRules.id);
+      if (scheduleIdErrors.id) errorsId.push(scheduleIdErrors.id);
+      if (scheduleIdErrors.en) errorsEn.push(scheduleIdErrors.en);
+
+      const memberIdErrors = validateField(member_id, validationRules.id);
+      if (memberIdErrors.id) errorsId.push(memberIdErrors.id);
+      if (memberIdErrors.en) errorsEn.push(memberIdErrors.en);
+
+      const roleIdErrors = validateField(role_id, validationRules.id);
+      if (roleIdErrors.id) errorsId.push(roleIdErrors.id);
+      if (roleIdErrors.en) errorsEn.push(roleIdErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       // Check if schedule exists
       const schedule = await Schedule.findOne({
-        where: { id: schedule_id, user_id: req.user?.id },
+        where: { id: schedule_id, church_id: church?.id },
       });
       if (!schedule) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Schedule not found'],
+          message: {
+            id: ['Jadwal tidak ditemukan'],
+            en: ['Schedule not found'],
+          },
         });
       }
 
       // Check if member exists
       const member = await Member.findOne({
-        where: { id: member_id, user_id: req.user?.id },
+        where: { id: member_id, church_id: church?.id },
       });
       if (!member) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Member not found'],
+          message: {
+            id: ['Anggota tidak ditemukan'],
+            en: ['Member not found'],
+          },
         });
       }
 
       // Check if role exists
       const role = await Role.findOne({
-        where: { id: role_id, user_id: req.user?.id },
+        where: { id: role_id, church_id: church?.id },
       });
       if (!role) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Role not found'],
+          message: {
+            id: ['Peran tidak ditemukan'],
+            en: ['Role not found'],
+          },
         });
       }
 
@@ -849,13 +1056,12 @@ export const MusicController = {
             as: 'schedule',
             where: {
               scheduled_at: schedule.scheduled_at,
-              user_id: req.user?.id, // Add user_id filter to schedule
+              church_id: church?.id,
             },
           },
         ],
         where: {
           member_id,
-          user_id: req.user?.id, // Add user_id filter
           schedule_id: { [Op.ne]: schedule_id },
         },
       });
@@ -864,14 +1070,18 @@ export const MusicController = {
         return res.json({
           code: 409,
           status: 'error',
-          message: [
-            'Member is already assigned to another schedule at the same time',
-          ],
+          message: {
+            id: [
+              'Anggota sudah ditugaskan ke jadwal lain pada waktu yang sama',
+            ],
+            en: [
+              'Member is already assigned to another schedule at the same time',
+            ],
+          },
         });
       }
 
       await ServiceAssignment.create({
-        user_id: req.user?.id,
         schedule_id,
         member_id,
         role_id,
@@ -893,69 +1103,110 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   async updateServiceAssignment(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
       const { schedule_id, member_id, role_id } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (schedule_id !== undefined) {
+        const scheduleIdErrors = validateField(schedule_id, validationRules.id);
+        if (scheduleIdErrors.id) errorsId.push(scheduleIdErrors.id);
+        if (scheduleIdErrors.en) errorsEn.push(scheduleIdErrors.en);
+      }
+
+      if (member_id !== undefined) {
+        const memberIdErrors = validateField(member_id, validationRules.id);
+        if (memberIdErrors.id) errorsId.push(memberIdErrors.id);
+        if (memberIdErrors.en) errorsEn.push(memberIdErrors.en);
+      }
+
+      if (role_id !== undefined) {
+        const roleIdErrors = validateField(role_id, validationRules.id);
+        if (roleIdErrors.id) errorsId.push(roleIdErrors.id);
+        if (roleIdErrors.en) errorsEn.push(roleIdErrors.en);
+      }
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const assignment = await ServiceAssignment.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id) },
       });
       if (!assignment) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Service assignment not found'],
+          message: {
+            id: ['Penugasan layanan tidak ditemukan'],
+            en: ['Service assignment not found'],
+          },
         });
       }
 
       if (schedule_id) {
         const sch = await Schedule.findOne({
-          where: { id: schedule_id, user_id: req.user?.id },
+          where: { id: schedule_id, church_id: church?.id },
         });
         if (!sch)
           return res.json({
             code: 404,
             status: 'error',
-            message: ['Schedule not found'],
+            message: {
+              id: ['Jadwal tidak ditemukan'],
+              en: ['Schedule not found'],
+            },
           });
         assignment.schedule_id = schedule_id;
       }
       if (member_id) {
         const mem = await Member.findOne({
-          where: { id: member_id, user_id: req.user?.id },
+          where: { id: member_id, church_id: church?.id },
         });
         if (!mem)
           return res.json({
             code: 404,
             status: 'error',
-            message: ['Member not found'],
+            message: {
+              id: ['Anggota tidak ditemukan'],
+              en: ['Member not found'],
+            },
           });
         assignment.member_id = member_id;
       }
       if (role_id) {
         const rol = await Role.findOne({
-          where: { id: role_id, user_id: req.user?.id },
+          where: { id: role_id, church_id: church?.id },
         });
         if (!rol)
           return res.json({
             code: 404,
             status: 'error',
-            message: ['Role not found'],
+            message: {
+              id: ['Peran tidak ditemukan'],
+              en: ['Role not found'],
+            },
           });
         assignment.role_id = role_id;
       }
@@ -965,13 +1216,16 @@ export const MusicController = {
         const currentSchId = schedule_id || assignment.schedule_id;
         const currentMemberId = member_id || assignment.member_id;
         const sch = await Schedule.findOne({
-          where: { id: currentSchId, user_id: req.user?.id },
+          where: { id: currentSchId, church_id: church?.id },
         });
         if (!sch) {
           return res.json({
             code: 404,
             status: 'error',
-            message: ['Schedule not found'],
+            message: {
+              id: ['Jadwal tidak ditemukan'],
+              en: ['Schedule not found'],
+            },
           });
         }
         const conflicting = await ServiceAssignment.findOne({
@@ -979,12 +1233,11 @@ export const MusicController = {
             {
               model: Schedule,
               as: 'schedule',
-              where: { scheduled_at: sch.scheduled_at, user_id: req.user?.id },
+              where: { scheduled_at: sch.scheduled_at, church_id: church?.id },
             },
           ],
           where: {
             member_id: currentMemberId,
-            user_id: req.user?.id,
             schedule_id: { [Op.ne]: currentSchId },
             id: { [Op.ne]: id },
           },
@@ -993,9 +1246,14 @@ export const MusicController = {
           return res.json({
             code: 409,
             status: 'error',
-            message: [
-              'Member is already assigned to another schedule at the same time',
-            ],
+            message: {
+              id: [
+                'Anggota sudah ditugaskan ke jadwal lain pada waktu yang sama',
+              ],
+              en: [
+                'Member is already assigned to another schedule at the same time',
+              ],
+            },
           });
         }
       }
@@ -1026,25 +1284,40 @@ export const MusicController = {
 
   async deleteServiceAssignment(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       const assignment = await ServiceAssignment.findOne({
-        where: { id: Number(id), user_id: req.user?.id },
+        where: { id: Number(id) },
       });
       if (!assignment) {
         return res.json({
           code: 404,
           status: 'error',
-          message: ['Service assignment not found'],
+          message: {
+            id: ['Penugasan layanan tidak ditemukan'],
+            en: ['Service assignment not found'],
+          },
         });
       }
 
@@ -1066,7 +1339,6 @@ export const MusicController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },

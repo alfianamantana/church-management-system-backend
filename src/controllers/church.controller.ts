@@ -59,44 +59,24 @@ export const ChurchController = {
         });
       }
 
-      // Fetch subscribe type separately to avoid locking issues with outer join
-      const subscribeType = await SubscribeType.findOne({
-        where: { id: dbUser.subscribe_type_id },
+      // Fetch default subscribe type for new church
+      const defaultSubscribeType = await SubscribeType.findOne({
+        where: { name: 'bibit' },
         transaction,
       });
 
-      // Check church count limit based on subscribe_type
-      if (
-        subscribeType?.name === 'bibit' ||
-        subscribeType?.name === 'bertumbuh'
-      ) {
-        const churchCount = await UserChurch.count({
-          where: { user_id: dbUser.id },
-          transaction,
+      if (!defaultSubscribeType) {
+        await transaction.rollback();
+        return res.json({
+          code: 500,
+          status: 'error',
+          message: {
+            id: ['Tipe langganan default tidak ditemukan'],
+            en: ['Default subscription type not found'],
+          },
         });
-        if (subscribeType?.name === 'bibit' && churchCount >= 1) {
-          await transaction.rollback();
-          return res.json({
-            code: 403,
-            status: 'error',
-            message: {
-              id: ['Akun bibit hanya dapat membuat 1 gereja'],
-              en: ['Bibit plan can only create 1 church'],
-            },
-          });
-        }
-        if (subscribeType?.name === 'bertumbuh' && churchCount >= 2) {
-          await transaction.rollback();
-          return res.json({
-            code: 403,
-            status: 'error',
-            message: {
-              id: ['Akun bertumbuh hanya dapat membuat maksimal 2 gereja'],
-              en: ['Bertumbuh plan can only create up to 2 churches'],
-            },
-          });
-        }
       }
+
       const { name, email, city, phone_number } = req.body;
 
       // Simplified validation
@@ -134,7 +114,13 @@ export const ChurchController = {
         });
       }
 
-      const createdChurch = await Church.create(req.body, { transaction });
+      const createdChurch = await Church.create(
+        {
+          ...req.body,
+          subscribe_type_id: defaultSubscribeType.id,
+        },
+        { transaction },
+      );
 
       // Create UserChurch relationship
       await UserChurch.create(
@@ -147,7 +133,7 @@ export const ChurchController = {
 
       const newuser = await User.findOne({
         where: { id: dbUser.id },
-        include: [Church, { model: SubscribeType, as: 'subscribeType' }],
+        include: [Church],
         transaction,
       });
 

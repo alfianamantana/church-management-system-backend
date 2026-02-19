@@ -59,10 +59,145 @@ export const UserController = {
       });
     }
   },
-  // Get all users with pagination and search
-  async getUsers(req: Request, res: Response) {
+
+  async create(req: Request, res: Response) {
+    let transaction: Transaction | null = null;
     try {
-      const { church } = req;
+      const { user, church } = req;
+      transaction = await sequelize.transaction();
+      const { name, email, phone_number, role, subscribe_type } = req.body;
+
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields = {
+        name: { value: name?.trim(), rules: validationRules.name },
+        email: { value: email, rules: validationRules.email },
+        phone_number: {
+          value: phone_number,
+          rules: validationRules.phone_number,
+        },
+      };
+
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
+        });
+      }
+
+      // Check if email already exists
+      const existingUser = await User.findOne({
+        where: { email },
+        transaction,
+      });
+      if (existingUser) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Email sudah terdaftar'],
+            en: ['Email already registered'],
+          },
+        });
+      }
+
+      // Get role
+      let userRole = await UserRole.findOne({
+        where: { id: role },
+        transaction,
+      });
+      if (!userRole) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Role tidak ditemukan'],
+            en: ['Role not found'],
+          },
+        });
+      }
+
+      // Get subscribe type
+      let subscribeType = await SubscribeType.findOne({
+        where: { name: subscribe_type },
+        transaction,
+      });
+      if (!subscribeType) {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Tipe langganan tidak ditemukan'],
+            en: ['Subscribe type not found'],
+          },
+        });
+      }
+
+      // Generate default password
+      const defaultPassword = 'password123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      const newUser = await User.create(
+        {
+          name: name.trim(),
+          email,
+          password: hashedPassword,
+          phone_number,
+          role_id: userRole.id,
+          subscribe_type_id: subscribeType.id,
+          superuser_id: req.user?.id,
+          total_jemaat_created: 0,
+          status: 'active',
+          registration_source: 'admin',
+          must_change_password: true,
+          last_login_at: null,
+        },
+        { transaction },
+      );
+
+      await transaction.commit();
+
+      return res.json({
+        code: 201,
+        status: 'success',
+        data: [newUser],
+        message: {
+          id: ['Pengguna berhasil dibuat dengan password default: password123'],
+          en: ['User created successfully with default password: password123'],
+        },
+      });
+    } catch (err) {
+      if (transaction) await transaction.rollback();
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Kesalahan server internal'],
+          en: ['Internal server error'],
+        },
+      });
+    }
+  },
+
+  // Get all users with pagination and search
+  async get(req: Request, res: Response) {
+    try {
+      const { user } = req;
 
       let { page = 1, limit = 10, q } = req.query;
       page = Number(page) || 1;
@@ -70,7 +205,7 @@ export const UserController = {
       const offset = (page - 1) * limit;
 
       let whereClause: any = {
-        church_id: church?.id,
+        superuser_id: user?.id,
       };
 
       if (q) {
@@ -99,6 +234,8 @@ export const UserController = {
         pagination: { total: count, page, limit },
       });
     } catch (err) {
+      console.log(err, '?AsdAS?');
+
       return res.json({
         code: 500,
         status: 'error',
@@ -115,14 +252,7 @@ export const UserController = {
   async updateUser(req: Request, res: Response) {
     try {
       const { id } = req.query;
-      const {
-        name,
-        email,
-        phone_number,
-        subscribe_until,
-        role,
-        subscribe_type,
-      } = req.body;
+      const { name, email, phone_number, role } = req.body;
 
       // Validation
       const errorsId: string[] = [];
@@ -180,7 +310,6 @@ export const UserController = {
 
       if (name) user.name = name;
       if (phone_number) user.phone_number = phone_number;
-      if (subscribe_until !== undefined) user.subscribe_until = subscribe_until;
       if (role) {
         // Find or create role record
         let roleRecord = await UserRole.findOne({ where: { name: role } });
@@ -189,18 +318,6 @@ export const UserController = {
         }
         user.role_id = roleRecord.id;
       }
-      if (subscribe_type) {
-        // Find or create subscribe type record
-        let subscribeTypeRecord = await SubscribeType.findOne({
-          where: { name: subscribe_type },
-        });
-        if (!subscribeTypeRecord) {
-          subscribeTypeRecord = await SubscribeType.create({
-            name: subscribe_type,
-          });
-        }
-        user.subscribe_type_id = subscribeTypeRecord.id;
-      }
 
       await user.save();
 
@@ -208,10 +325,7 @@ export const UserController = {
       const updatedUser = await User.findOne({
         where: { id: user.id },
         attributes: { exclude: ['password'] },
-        include: [
-          { model: UserRole, as: 'userRole' },
-          { model: SubscribeType, as: 'subscribeType' },
-        ],
+        include: [{ model: UserRole, as: 'userRole' }],
       });
 
       return res.json({
@@ -439,23 +553,7 @@ export const UserController = {
         });
 
       // Check if subscription has expired
-      if (
-        userInstance.subscribe_until &&
-        new Date() > userInstance.subscribe_until
-      ) {
-        return res.json({
-          code: 403,
-          status: 'error',
-          message: {
-            id: [
-              'Langganan kedaluwarsa, silakan perbarui untuk terus menggunakan layanan',
-            ],
-            en: [
-              'Subscription expired, please renew to continue using the service',
-            ],
-          },
-        });
-      }
+      // Removed as subscription moved to Church model
 
       const match = await bcrypt.compare(password, userInstance.password);
 
@@ -597,7 +695,6 @@ export const UserController = {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Set default subscription (3 days trial)
-      const subscribe_until = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
       const unique_key =
         Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15);
@@ -633,11 +730,13 @@ export const UserController = {
           email,
           password: hashedPassword,
           phone_number,
-          subscribe_until,
           role_id: userRole.id,
-          subscribe_type_id: bibitSubscribeType.id, // Default to trial
           unique_key,
-          is_verified: false,
+          status: 'pending_activation',
+          registration_source: 'self',
+          must_change_password: false,
+          last_login_at: new Date(),
+          superuser_id: null,
         },
         { transaction },
       );
@@ -757,13 +856,13 @@ export const UserController = {
         });
       }
 
-      if (user.is_verified) {
+      if (user.status !== 'pending_activation') {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Akun sudah diverifikasi'],
-            en: ['Account already verified'],
+            id: ['Status akun tidak valid'],
+            en: ['Invalid account status'],
           },
         });
       }
@@ -790,7 +889,7 @@ export const UserController = {
       }
 
       // Verify the account
-      user.is_verified = true;
+      user.status = 'active';
       await user.save();
 
       // Delete the used OTP
@@ -856,7 +955,7 @@ export const UserController = {
         });
       }
 
-      if (user.is_verified) {
+      if (user.status === 'active') {
         return res.json({
           code: 400,
           status: 'error',

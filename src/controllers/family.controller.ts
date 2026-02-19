@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { Family, Congregation, Church } from '../model';
-import Validator from 'validatorjs';
+import { Family, Congregation, Church, UserChurch } from '../model';
+import { getValidationRules, validateField } from '../helpers';
 import { Op, where, fn } from 'sequelize';
 import sequelize from '../../config/db.config';
 
 export const FamilyController = {
-  async getFamilies(req: Request, res: Response) {
+  async get(req: Request, res: Response) {
     try {
       const { page, limit, q, id } = req.query as {
         page?: string;
@@ -14,7 +14,8 @@ export const FamilyController = {
         id?: string;
         member?: boolean | string;
       };
-      const member = req.query.member === 'true' ? true : false;
+
+      const member = req.query.member === 'true';
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
@@ -30,14 +31,17 @@ export const FamilyController = {
         ];
         includeClause.push({
           model: Congregation,
-          as: 'jemaats',
+          as: 'congregations',
           attributes,
         });
       }
 
       // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
+      const userChurch = await UserChurch.findOne({
+        where: { user_id: req.user?.id },
+        include: [{ model: Church, as: 'church' }],
+      });
+      if (!userChurch || !userChurch.church) {
         return res.json({
           code: 404,
           status: 'error',
@@ -47,6 +51,7 @@ export const FamilyController = {
           },
         });
       }
+      const church = userChurch.church;
 
       let whereClause: any = { church_id: church.id }; // Add church filter
 
@@ -93,30 +98,59 @@ export const FamilyController = {
   },
 
   // Create a new family
-  async createFamily(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     try {
-      const { name, jemaat_ids } = req.body as {
+      const { name, congregation_ids } = req.body as {
         name: string;
-        jemaat_ids?: number[];
+        congregation_ids?: string[];
       };
 
-      const validator = new Validator(req.body, {
-        name: 'required|string|max:255',
-        jemaat_ids: 'array',
-        'jemaat_ids.*': 'integer',
-      });
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      if (validator.fails()) {
+      // Validate name
+      const nameErrors = validateField(name, validationRules.name);
+      if (nameErrors.id) errorsId.push(nameErrors.id);
+      if (nameErrors.en) errorsEn.push(nameErrors.en);
+
+      // Validate congregation_ids (required)
+      if (
+        !congregation_ids ||
+        !Array.isArray(congregation_ids) ||
+        congregation_ids.length === 0
+      ) {
+        errorsId.push('Pilih setidaknya satu jemaat untuk keluarga');
+        errorsEn.push('Select at least one congregation for the family');
+      } else {
+        for (const id of congregation_ids) {
+          if (typeof id !== 'string') {
+            errorsId.push('ID jemaat harus berupa string');
+            errorsEn.push('Congregation ID must be a string');
+            break;
+          }
+        }
+      }
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: Object.values(validator.errors.all()).flat(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
       }
 
       // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
+      const userChurch = await UserChurch.findOne({
+        where: { user_id: req.user?.id },
+        include: [{ model: Church, as: 'church' }],
+      });
+      if (!userChurch || !userChurch.church) {
         return res.json({
           code: 404,
           status: 'error',
@@ -126,14 +160,15 @@ export const FamilyController = {
           },
         });
       }
+      const church = userChurch.church;
 
       const family = await Family.create({ name, church_id: church.id });
 
-      // Update jemaat family_id
-      if (jemaat_ids && jemaat_ids.length > 0) {
+      // Update congregation family_id
+      if (congregation_ids && congregation_ids.length > 0) {
         await Congregation.update(
           { family_id: family.id },
-          { where: { id: jemaat_ids, church_id: church.id } }, // Add church filter
+          { where: { id: congregation_ids, church_id: church.id } }, // Add church filter
         );
       }
 
@@ -154,37 +189,65 @@ export const FamilyController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   // Update a family
-  async updateFamily(req: Request, res: Response) {
+  async update(req: Request, res: Response) {
     try {
       const id = req.query.id as string;
-      const { name, jemaat_ids } = req.body as {
+      const { name, congregation_ids } = req.body as {
         name: string;
-        jemaat_ids?: string[];
+        congregation_ids?: string[];
       };
 
-      const validator = new Validator(req.body, {
-        name: 'required|string|max:255',
-        jemaat_ids: 'array',
-        'jemaat_ids.*': 'integer',
-      });
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      if (validator.fails()) {
+      // Validate name
+      const nameErrors = validateField(name, validationRules.name);
+      if (nameErrors.id) errorsId.push(nameErrors.id);
+      if (nameErrors.en) errorsEn.push(nameErrors.en);
+
+      // Validate congregation_ids (required)
+      if (
+        !congregation_ids ||
+        !Array.isArray(congregation_ids) ||
+        congregation_ids.length === 0
+      ) {
+        errorsId.push('Pilih setidaknya satu jemaat untuk keluarga');
+        errorsEn.push('Select at least one congregation for the family');
+      } else {
+        for (const id of congregation_ids) {
+          if (typeof id !== 'string') {
+            errorsId.push('ID jemaat harus berupa string');
+            errorsEn.push('Congregation ID must be a string');
+            break;
+          }
+        }
+      }
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: Object.values(validator.errors.all()).flat(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
       }
 
       // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
+      const userChurch = await UserChurch.findOne({
+        where: { user_id: req.user?.id },
+        include: [{ model: Church, as: 'church' }],
+      });
+      if (!userChurch || !userChurch.church) {
         return res.json({
           code: 404,
           status: 'error',
@@ -194,6 +257,7 @@ export const FamilyController = {
           },
         });
       }
+      const church = userChurch.church;
 
       const family = await Family.findOne({
         where: { id: Number(id), church_id: church.id },
@@ -211,13 +275,13 @@ export const FamilyController = {
 
       await family.update({ name });
 
-      // Handle jemaat updates
-      if (jemaat_ids !== undefined) {
+      // Handle congregation updates
+      if (congregation_ids !== undefined) {
         const currentCongregation = await Congregation.findAll({
           where: { family_id: family.id, church_id: church.id }, // Add church filter
         });
-        const currentIds = currentCongregation.map((j) => j.id);
-        const selectedIds = jemaat_ids || [];
+        const currentIds: string[] = currentCongregation.map((j) => j.id);
+        const selectedIds: string[] = congregation_ids || [];
 
         const toAdd = selectedIds.filter((id) => !currentIds.includes(id));
         const toRemove = currentIds.filter((id) => !selectedIds.includes(id));
@@ -260,13 +324,16 @@ export const FamilyController = {
   },
 
   // Delete a family
-  async deleteFamily(req: Request, res: Response) {
+  async destroy(req: Request, res: Response) {
     try {
       const id = req.query.id as string;
 
       // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
+      const userChurch = await UserChurch.findOne({
+        where: { user_id: req.user?.id },
+        include: [{ model: Church, as: 'church' }],
+      });
+      if (!userChurch || !userChurch.church) {
         return res.json({
           code: 404,
           status: 'error',
@@ -276,6 +343,7 @@ export const FamilyController = {
           },
         });
       }
+      const church = userChurch.church;
 
       const family = await Family.findOne({
         where: { id: id, church_id: church.id },

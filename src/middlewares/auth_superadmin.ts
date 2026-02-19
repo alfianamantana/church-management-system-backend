@@ -42,10 +42,7 @@ const auth_superadmin = async (
     }
     const user = await User.findOne({
       where: { id: authRecord.user_id },
-      include: [
-        { model: UserRole, as: 'userRole' },
-        { model: SubscribeType, as: 'subscribeType' },
-      ],
+      include: [{ model: UserRole, as: 'userRole' }],
     });
     if (!user) {
       return res.json({
@@ -72,9 +69,7 @@ const auth_superadmin = async (
     }
 
     // Set subscribe_type property for backward compatibility
-    if (user.subscribeType) {
-      (user as any).subscribe_type = user.subscribeType.name;
-    }
+    // Removed as subscribeType moved to Church model
 
     req.user = user;
 

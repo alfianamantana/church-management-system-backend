@@ -181,6 +181,28 @@ export const validateNumericEn = (
   return null;
 };
 
+export const validateMinValue = (
+  value: number,
+  min: number,
+  fieldName: string,
+): string | null => {
+  if (typeof value !== 'number' || isNaN(value) || value < min) {
+    return `${fieldName} minimal ${min}`;
+  }
+  return null;
+};
+
+export const validateMinValueEn = (
+  value: number,
+  min: number,
+  fieldName: string,
+): string | null => {
+  if (typeof value !== 'number' || isNaN(value) || value < min) {
+    return `The ${fieldName} must be at least ${min}`;
+  }
+  return null;
+};
+
 export const validateArrayOfStrings = (
   value: any[],
   fieldName: string,
@@ -425,5 +447,204 @@ export const getValidationRules = () => ({
       { validator: validateRequiredEn, args: ['gender'] },
       { validator: validateInEn, args: [['male', 'female'], 'gender'] },
     ],
+  },
+  asset_name: {
+    id: [
+      { validator: validateRequired, args: ['nama aset'] },
+      { validator: validateString, args: ['nama aset'] },
+      { validator: validateMinLength, args: [2, 'nama aset'] },
+      { validator: validateMaxLength, args: [255, 'nama aset'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['asset name'] },
+      { validator: validateStringEn, args: ['asset name'] },
+      { validator: validateMinLengthEn, args: [2, 'asset name'] },
+      { validator: validateMaxLengthEn, args: [255, 'asset name'] },
+    ],
+  },
+  asset_value: {
+    id: [{ validator: validateNumeric, args: ['nilai aset'] }],
+    en: [{ validator: validateNumericEn, args: ['asset value'] }],
+  },
+  asset_condition: {
+    id: [
+      {
+        validator: validateIn,
+        args: [
+          ['excellent', 'good', 'fair', 'poor', 'damaged'],
+          'kondisi aset',
+        ],
+      },
+    ],
+    en: [
+      {
+        validator: validateInEn,
+        args: [
+          ['excellent', 'good', 'fair', 'poor', 'damaged'],
+          'asset condition',
+        ],
+      },
+    ],
+  },
+  asset_location: {
+    id: [
+      { validator: validateString, args: ['lokasi aset'] },
+      { validator: validateMaxLength, args: [255, 'lokasi aset'] },
+    ],
+    en: [
+      { validator: validateStringEn, args: ['asset location'] },
+      { validator: validateMaxLengthEn, args: [255, 'asset location'] },
+    ],
+  },
+  asset_category: {
+    id: [
+      { validator: validateString, args: ['kategori aset'] },
+      { validator: validateMaxLength, args: [255, 'kategori aset'] },
+    ],
+    en: [
+      { validator: validateStringEn, args: ['asset category'] },
+      { validator: validateMaxLengthEn, args: [255, 'asset category'] },
+    ],
+  },
+  asset_description: {
+    id: [
+      { validator: validateString, args: ['deskripsi aset'] },
+      { validator: validateMaxLength, args: [1000, 'deskripsi aset'] },
+    ],
+    en: [
+      { validator: validateStringEn, args: ['asset description'] },
+      { validator: validateMaxLengthEn, args: [1000, 'asset description'] },
+    ],
+  },
+  asset_notes: {
+    id: [
+      { validator: validateString, args: ['catatan aset'] },
+      { validator: validateMaxLength, args: [1000, 'catatan aset'] },
+    ],
+    en: [
+      { validator: validateStringEn, args: ['asset notes'] },
+      { validator: validateMaxLengthEn, args: [1000, 'asset notes'] },
+    ],
+  },
+  acquisition_date: {
+    id: [{ validator: validateDate, args: ['tanggal akuisisi'] }],
+    en: [{ validator: validateDateEn, args: ['acquisition date'] }],
+  },
+  event_title: {
+    id: [
+      { validator: validateRequired, args: ['judul acara'] },
+      { validator: validateString, args: ['judul acara'] },
+      { validator: validateMinLength, args: [2, 'judul acara'] },
+      { validator: validateMaxLength, args: [255, 'judul acara'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['event title'] },
+      { validator: validateStringEn, args: ['event title'] },
+      { validator: validateMinLengthEn, args: [2, 'event title'] },
+      { validator: validateMaxLengthEn, args: [255, 'event title'] },
+    ],
+  },
+  event_start: {
+    id: [
+      { validator: validateRequired, args: ['waktu mulai acara'] },
+      { validator: validateDate, args: ['waktu mulai acara'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['event start time'] },
+      { validator: validateDateEn, args: ['event start time'] },
+    ],
+  },
+  event_end: {
+    id: [
+      { validator: validateRequired, args: ['waktu selesai acara'] },
+      { validator: validateDate, args: ['waktu selesai acara'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['event end time'] },
+      { validator: validateDateEn, args: ['event end time'] },
+    ],
+  },
+  event_description: {
+    id: [
+      { validator: validateString, args: ['deskripsi acara'] },
+      { validator: validateMaxLength, args: [1000, 'deskripsi acara'] },
+    ],
+    en: [
+      { validator: validateStringEn, args: ['event description'] },
+      { validator: validateMaxLengthEn, args: [1000, 'event description'] },
+    ],
+  },
+  event_id: {
+    id: [
+      { validator: validateRequired, args: ['id acara'] },
+      { validator: validateNumeric, args: ['id acara'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['event id'] },
+      { validator: validateNumericEn, args: ['event id'] },
+    ],
+  },
+  category_name: {
+    id: [
+      { validator: validateRequired, args: ['nama kategori'] },
+      { validator: validateString, args: ['nama kategori'] },
+      { validator: validateMinLength, args: [2, 'nama kategori'] },
+      { validator: validateMaxLength, args: [255, 'nama kategori'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['category name'] },
+      { validator: validateStringEn, args: ['category name'] },
+      { validator: validateMinLengthEn, args: [2, 'category name'] },
+      { validator: validateMaxLengthEn, args: [255, 'category name'] },
+    ],
+  },
+  category_type: {
+    id: [
+      { validator: validateRequired, args: ['tipe kategori'] },
+      { validator: validateIn, args: [['income', 'expense'], 'tipe kategori'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['category type'] },
+      {
+        validator: validateInEn,
+        args: [['income', 'expense'], 'category type'],
+      },
+    ],
+  },
+  date: {
+    id: [
+      { validator: validateRequired, args: ['tanggal'] },
+      { validator: validateDate, args: ['tanggal'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['date'] },
+      { validator: validateDateEn, args: ['date'] },
+    ],
+  },
+  category_id: {
+    id: [
+      { validator: validateRequired, args: ['id kategori'] },
+      { validator: validateString, args: ['id kategori'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['category id'] },
+      { validator: validateStringEn, args: ['category id'] },
+    ],
+  },
+  amount: {
+    id: [
+      { validator: validateRequired, args: ['jumlah'] },
+      { validator: validateNumeric, args: ['jumlah'] },
+      { validator: validateMinValue, args: [0, 'jumlah'] },
+    ],
+    en: [
+      { validator: validateRequiredEn, args: ['amount'] },
+      { validator: validateNumericEn, args: ['amount'] },
+      { validator: validateMinValueEn, args: [0, 'amount'] },
+    ],
+  },
+  note: {
+    id: [{ validator: validateString, args: ['catatan'] }],
+    en: [{ validator: validateStringEn, args: ['note'] }],
   },
 });

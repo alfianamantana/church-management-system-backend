@@ -9,7 +9,11 @@ declare global {
   }
 }
 
-const auth_user = async (req: Request, res: Response, next: NextFunction) => {
+const auth_user_active = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const token = req.headers.token as string;
     const authorization = req.headers.authorization as string;
@@ -76,6 +80,17 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
     // Set subscribe_type property for backward compatibility
     // Removed as subscribeType moved to Church model
 
+    if (user.status !== 'active') {
+      return res.json({
+        code: 401,
+        status: 'error',
+        message: {
+          id: ['Tidak diizinkan'],
+          en: ['Unauthorized'],
+        },
+      });
+    }
+
     (req as Express.Request).user = user;
     next();
   } catch (error) {
@@ -90,4 +105,4 @@ const auth_user = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export default auth_user;
+export default auth_user_active;

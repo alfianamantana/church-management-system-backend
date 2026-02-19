@@ -1,8 +1,18 @@
 import dotenv from 'dotenv';
 dotenv.config();
+
 console.log('Environment loaded, starting application...');
-import './config/db.config';
+console.log('DB_NAME from env:', process.env.DB_NAME);
+console.log('DB_USER from env:', process.env.DB_USER);
+console.log('DB_PASSWORD from env:', process.env.DB_PASSWORD);
+console.log(
+  'All env:',
+  Object.keys(process.env).filter(
+    (key) => key.startsWith('DB_') || key === 'PORT',
+  ),
+);
 console.log('Database config loaded...');
+import './config/db.config';
 import 'reflect-metadata';
 import express, { Express } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -18,7 +28,8 @@ import { DashboardRoutes } from './src/routes/dashboard.route';
 import { AssetRoutes } from './src/routes/asset.route';
 import { ChurchRoutes } from './src/routes/church.route';
 import { PriorityNeedRoutes } from './src/routes/priority_need.route';
-
+import UserRoleRoutes from './src/routes/user_role.route';
+import auth_public from './src/middlewares/auth_public';
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000;
 
@@ -34,6 +45,7 @@ const limiter = rateLimit({
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(auth_public);
 
 const jemaatRouter = express.Router();
 CongregationRoutes(jemaatRouter);
@@ -78,6 +90,8 @@ app.use('/churches', churchRouter);
 const priorityNeedRouter = express.Router();
 PriorityNeedRoutes(priorityNeedRouter);
 app.use('/priority-needs', priorityNeedRouter);
+
+app.use('/user-roles', UserRoleRoutes);
 
 // 404 handler for unmatched routes
 app.use((req, res) => {

@@ -8,11 +8,25 @@ export const UserRoutes = (router: Router): void => {
   // CRUD routes (protected)
   router.get(
     '/',
-    [auth_user, auth_main_account, auth_church],
-    UserController.getUsers,
+    [auth_user, auth_church, auth_main_account],
+    UserController.get,
   );
-  router.put('/', auth_superadmin, UserController.updateUser);
-  router.delete('/', auth_superadmin, UserController.deleteUser);
+  router.post(
+    '/create',
+    [auth_user, auth_church, auth_superadmin],
+    UserController.create,
+  );
+  router.put(
+    '/',
+    [auth_user, auth_church, auth_superadmin],
+    UserController.updateUser,
+  );
+  router.delete(
+    '/',
+    [auth_user, auth_church, auth_superadmin],
+    UserController.deleteUser,
+  );
+
   router.put('/change-password', auth_user, UserController.changePassword);
   router.get('/profile', auth_user, UserController.getProfile);
 

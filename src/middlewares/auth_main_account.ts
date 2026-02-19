@@ -7,7 +7,6 @@ const auth_main_account = async (
 ) => {
   try {
     const { user } = req;
-
     if (user?.userRole?.name !== 'superadmin') {
       return res.json({
         code: 403,
@@ -28,6 +27,7 @@ const auth_main_account = async (
         id: ['Kesalahan server internal'],
         en: ['Internal server error'],
       },
+      error,
     });
   }
 };

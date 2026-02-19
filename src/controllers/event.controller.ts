@@ -1,63 +1,30 @@
 import { Request, Response } from 'express';
-import { Event, Church, UserChurch } from '../model';
-import Validator from 'validatorjs';
+import { Event, Church } from '../model';
 import { Op } from 'sequelize';
+import { validateField, getValidationRules } from '../helpers';
 
 export const EventController = {
-  async getAll(req: Request, res: Response) {
+  async get(req: Request, res: Response) {
     try {
-      let { page = 1, limit = 10, id, q, start, end } = req.query;
+      const { church } = req;
+      const { page = 1, limit = 10, id, q, start, end } = req.query;
 
-      page = Number(page) || 1;
-      limit = Number(limit) || 10;
-      const offset = (page - 1) * limit;
-      const start_date = start ? new Date(String(start)) : null;
-      const end_date = end ? new Date(String(end)) : null;
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
 
-      // Get church for the user
-      const userChurch = await UserChurch.findOne({
-        where: { user_id: req.user?.id },
-      });
-      const church = userChurch
-        ? await Church.findOne({ where: { id: userChurch.church_id } })
-        : null;
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
+      const whereClause: any = { church_id: church?.id };
+
+      if (q) whereClause.title = { [Op.iLike]: `%${q}%` };
+      if (start && end) {
+        whereClause.start = { [Op.gte]: new Date(String(start)) };
+        whereClause.end = { [Op.lte]: new Date(String(end)) };
       }
-
-      let whereClause: any = {
-        church_id: church.id,
-      };
-
-      if (q) {
-        whereClause = {
-          ...whereClause,
-          title: { [Op.iLike]: `%${q}%` },
-        };
-      }
-
-      if (start_date && end_date) {
-        whereClause = {
-          ...whereClause,
-          start: { [Op.gte]: start_date },
-          end: { [Op.lte]: end_date },
-        };
-      }
-
-      if (id) {
-        whereClause = { ...whereClause, id: Number(id) };
-      }
+      if (id) whereClause.id = Number(id);
 
       const { count, rows } = await Event.findAndCountAll({
         offset,
-        limit,
+        limit: limitNum,
         where: whereClause,
         order: [['id', 'ASC']],
       });
@@ -70,10 +37,7 @@ export const EventController = {
           en: ['Events retrieved successfully'],
         },
         data: rows,
-        pagination: {
-          total: count,
-          page,
-        },
+        pagination: { total: count, page: pageNum },
       });
     } catch (err) {
       return res.json({
@@ -84,39 +48,37 @@ export const EventController = {
       });
     }
   },
-  async updateEvent(req: Request, res: Response) {
+  async update(req: Request, res: Response) {
     try {
+      const church = req.church;
       const { id } = req.query;
 
-      const rules = {
-        id: 'required|numeric',
-      };
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validate id
+      const idErrors = validateField(id, validationRules.event_id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
-        });
-
-      const { title, start, end, description } = req.body;
-
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
           message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
 
+      const { title, start, end, description } = req.body;
+
       const event = await Event.findOne({
-        where: { id, church_id: church.id },
+        where: { id, church_id: church?.id },
       });
 
       if (!event) {
@@ -155,27 +117,65 @@ export const EventController = {
       });
     }
   },
-  async createEvent(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     try {
-      const { church_id, title, start, end, description } = req.body;
+      const { title, start, end, description } = req.body;
 
-      const rules = {
-        church_id: 'required|integer',
-        title: 'required|string',
-        start: 'required|date',
-        end: 'required|date',
-      };
+      // Get church from middleware
+      const church = req.church;
+      if (!church) {
+        return res.json({
+          code: 404,
+          status: 'error',
+          message: {
+            id: ['Gereja tidak ditemukan'],
+            en: ['Church not found'],
+          },
+        });
+      }
 
-      const validation = new Validator({ church_id, title, start, end }, rules);
-      if (validation.fails())
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate required fields
+      const titleErrors = validateField(title, validationRules.event_title);
+      if (titleErrors.id) errorsId.push(titleErrors.id);
+      if (titleErrors.en) errorsEn.push(titleErrors.en);
+
+      const startErrors = validateField(start, validationRules.event_start);
+      if (startErrors.id) errorsId.push(startErrors.id);
+      if (startErrors.en) errorsEn.push(startErrors.en);
+
+      const endErrors = validateField(end, validationRules.event_end);
+      if (endErrors.id) errorsId.push(endErrors.id);
+      if (endErrors.en) errorsEn.push(endErrors.en);
+
+      // Validate optional description
+      if (description !== undefined) {
+        const descErrors = validateField(
+          description,
+          validationRules.event_description,
+        );
+        if (descErrors.id) errorsId.push(descErrors.id);
+        if (descErrors.en) errorsEn.push(descErrors.en);
+      }
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
+          message: {
+            id: errorsId,
+            en: errorsEn,
+          },
         });
+      }
 
       await Event.create({
-        church_id,
+        church_id: church.id,
         title,
         start,
         end,
@@ -202,37 +202,35 @@ export const EventController = {
       });
     }
   },
-  async deleteEvent(req: Request, res: Response) {
+  async destroy(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = {
-        id: 'required|numeric',
-      };
+      // Validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
 
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Validate id
+      const idErrors = validateField(id, validationRules.event_id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
-          message: validation.errors.all(),
-        });
-
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
           message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
 
       const event = await Event.findOne({
-        where: { id, church_id: church.id },
+        where: { id, church_id: church?.id },
       });
 
       if (!event) {

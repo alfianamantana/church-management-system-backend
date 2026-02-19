@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../model';
+import { User, Church, UserChurch } from '../model';
 const auth_check_jemaat = async (
   req: Request,
   res: Response,
@@ -7,13 +7,23 @@ const auth_check_jemaat = async (
 ) => {
   try {
     const userId = req.user?.id;
+    const churchId = req.headers.church as string;
+
     const user = await User.findOne({
       where: { id: userId },
-      include: ['subscribeType'],
     });
+
+    const userChurch = await UserChurch.findOne({
+      where: { user_id: userId, church_id: churchId },
+      include: [{ model: Church, as: 'church', include: ['subscribeType'] }],
+    });
+
+    const church = userChurch?.church;
+
     if (
-      user?.subscribeType?.name === 'bibit' &&
-      user.total_jemaat_created >= 100
+      church &&
+      church?.subscribeType?.name === 'bibit' &&
+      church.total_jemaat_created >= 100
     ) {
       return res.json({
         code: 403,
@@ -28,8 +38,9 @@ const auth_check_jemaat = async (
         },
       });
     } else if (
-      user?.subscribeType?.name === 'bertumbuh' &&
-      user.total_jemaat_created >= 500
+      church &&
+      church?.subscribeType?.name === 'bertumbuh' &&
+      church.total_jemaat_created >= 500
     ) {
       return res.json({
         code: 403,

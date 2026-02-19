@@ -1,14 +1,10 @@
 import { Router } from 'express';
-import {
-  getAssets,
-  createAsset,
-  updateAsset,
-  deleteAsset,
-} from '../controllers/asset.controller';
-import auth_user from '../middlewares/auth_user';
+import { AssetController as controller } from '../controllers/asset.controller';
+import auth_user_active from '../middlewares/auth_user_active';
+import auth_church from '../middlewares/auth_church';
 export const AssetRoutes = (router: Router) => {
-  router.get('/', auth_user, getAssets);
-  router.post('/', auth_user, createAsset);
-  router.put('/', auth_user, updateAsset);
-  router.delete('/', auth_user, deleteAsset);
+  router.get('/', [auth_user_active, auth_church], controller.get);
+  router.post('/', [auth_user_active, auth_church], controller.create);
+  router.put('/', [auth_user_active, auth_church], controller.update);
+  router.delete('/', [auth_user_active, auth_church], controller.destroy);
 };

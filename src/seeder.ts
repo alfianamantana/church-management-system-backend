@@ -42,7 +42,6 @@ async function seedSuperadmin() {
     role_id: superadminRole.id,
     subscribe_type_id: fullSubscribeType.id,
     unique_key: 'alfianganteng',
-    is_verified: true,
   });
   console.log('Superadmin seeded!');
 }

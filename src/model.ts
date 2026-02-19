@@ -7,6 +7,8 @@ import {
   BelongsTo,
   HasMany,
   BelongsToMany,
+  CreatedAt,
+  UpdatedAt,
 } from 'sequelize-typescript';
 
 @Table({
@@ -31,6 +33,22 @@ export class UserRole extends Model {
     field: 'name',
   })
   name!: string;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -56,8 +74,24 @@ export class SubscribeType extends Model {
   })
   name!: string;
 
-  @HasMany(() => User)
-  users?: User[];
+  @HasMany(() => Church)
+  churches?: Church[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -85,7 +119,7 @@ export class User extends Model {
   @Column({
     type: DataType.STRING(255),
     unique: true,
-    allowNull: true,
+    allowNull: false,
     field: 'unique_key',
   })
   unique_key?: string;
@@ -113,7 +147,7 @@ export class User extends Model {
 
   @Column({
     type: DataType.STRING(30),
-    allowNull: false,
+    allowNull: true,
     field: 'phone_number',
   })
   phone_number!: string;
@@ -130,41 +164,38 @@ export class User extends Model {
   userRole?: UserRole;
 
   @Column({
-    type: DataType.DATE,
-    allowNull: true,
-    field: 'subscribe_until',
-  })
-  subscribe_until?: Date;
-
-  @ForeignKey(() => SubscribeType)
-  @Column({
-    type: DataType.UUID,
+    type: DataType.ENUM(
+      'pending_activation',
+      'active',
+      'suspended',
+      'disabled',
+    ),
     allowNull: false,
-    field: 'subscribe_type_id',
+    defaultValue: 'pending_activation',
   })
-  subscribe_type_id!: string;
-
-  @BelongsTo(() => SubscribeType, {
-    foreignKey: 'subscribe_type_id',
-    as: 'subscribeType',
-  })
-  subscribeType?: SubscribeType;
+  status!: 'pending_activation' | 'active' | 'suspended' | 'disabled';
 
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.ENUM('self', 'admin'),
     allowNull: false,
-    defaultValue: 0,
-    field: 'total_jemaat_created',
+    defaultValue: 'self',
   })
-  total_jemaat_created!: number;
+  registration_source!: 'self' | 'admin';
 
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: false,
-    field: 'is_verified',
+    defaultValue: true,
+    field: 'must_change_password',
   })
-  is_verified!: boolean;
+  must_change_password!: boolean;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'last_login_at',
+  })
+  last_login_at?: Date;
 
   @ForeignKey(() => User)
   @Column({
@@ -189,15 +220,27 @@ export class User extends Model {
   @HasMany(() => UserOtp)
   userOtps?: UserOtp[];
 
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+
   toJSON() {
     const values = { ...this.get() };
     // Include role from relationship if loaded
     if (this.userRole) {
       values.role = this.userRole.name;
-    }
-    // Include subscribe type from relationship if loaded
-    if (this.subscribeType) {
-      values.subscribe_type = this.subscribeType.name;
     }
     return values;
   }
@@ -241,10 +284,15 @@ export class UserOtp extends Model {
   code!: string;
 
   @Column({
-    type: DataType.ENUM('activation', '2fa', 'reset_password', 'change_email'),
+    type: DataType.ENUM(
+      'activation',
+      '2fa',
+      'reset_password',
+      'change_password',
+    ),
     allowNull: false,
   })
-  type!: 'activation' | '2fa' | 'reset_password' | 'change_email';
+  type!: 'activation' | '2fa' | 'reset_password' | 'change_password';
 
   @Column({
     type: DataType.DATE,
@@ -252,6 +300,22 @@ export class UserOtp extends Model {
     field: 'expired_at',
   })
   expired_at!: Date;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -310,7 +374,7 @@ export class Church extends Model {
   families?: Family[];
 
   @HasMany(() => Congregation)
-  jemaats?: Congregation[];
+  congregations?: Congregation[];
 
   @HasMany(() => Schedule)
   schedules?: Schedule[];
@@ -329,6 +393,51 @@ export class Church extends Model {
 
   @BelongsToMany(() => User, { through: () => UserChurch })
   users?: User[];
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_jemaat_created',
+  })
+  total_jemaat_created!: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'subscribe_until',
+  })
+  subscribe_until?: Date;
+
+  @ForeignKey(() => SubscribeType)
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+    field: 'subscribe_type_id',
+  })
+  subscribe_type_id?: string;
+
+  @BelongsTo(() => SubscribeType, {
+    foreignKey: 'subscribe_type_id',
+    as: 'subscribeType',
+  })
+  subscribeType?: SubscribeType;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -370,7 +479,23 @@ export class Family extends Model {
   name!: string;
 
   @HasMany(() => Congregation)
-  jemaats?: Congregation[];
+  congregations?: Congregation[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -509,6 +634,22 @@ export class Congregation extends Model {
 
   @BelongsTo(() => Family)
   family?: Family;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -554,6 +695,22 @@ export class Auth extends Model {
     field: 'valid_until',
   })
   valid_until!: Date;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -616,6 +773,22 @@ export class Event extends Model {
     field: 'description',
   })
   description?: string;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -665,6 +838,22 @@ export class Member extends Model {
 
   @HasMany(() => ServiceAssignment)
   serviceAssignments?: ServiceAssignment[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -707,6 +896,22 @@ export class Role extends Model {
 
   @HasMany(() => ServiceAssignment)
   serviceAssignments?: ServiceAssignment[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -757,6 +962,22 @@ export class Schedule extends Model {
 
   @HasMany(() => ServiceAssignment)
   serviceAssignments?: ServiceAssignment[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -813,6 +1034,22 @@ export class ServiceAssignment extends Model {
 
   @BelongsTo(() => Role)
   role!: Role;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -861,6 +1098,22 @@ export class Category extends Model {
 
   @HasMany(() => Transaction)
   transactions?: Transaction[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -928,6 +1181,22 @@ export class Transaction extends Model {
     comment: 'Catatan tambahan untuk transaksi',
   })
   note?: string;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -1018,6 +1287,22 @@ export class Asset extends Model {
     comment: 'Catatan tambahan untuk asset',
   })
   notes?: string;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -1052,6 +1337,22 @@ export class PriorityNeed extends Model {
 
   @BelongsToMany(() => User, { through: () => UserPriorityNeed })
   users?: User[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -1096,6 +1397,22 @@ export class UserPriorityNeed extends Model {
 
   @BelongsTo(() => PriorityNeed)
   priorityNeed!: PriorityNeed;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }
 
 @Table({
@@ -1140,4 +1457,20 @@ export class UserChurch extends Model {
 
   @BelongsTo(() => Church)
   church!: Church;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
 }

@@ -14,7 +14,6 @@ export const CongregationController = {
         id,
         q,
         family_id,
-        exclude_id,
         gender,
         birth_date_start,
         birth_date_end,
@@ -24,14 +23,24 @@ export const CongregationController = {
         couple,
       } = req.query;
 
+      const exclude_id = req.query['exclude_id[]'];
+
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
 
+      const excludeIds = exclude_id
+        ? Array.isArray(exclude_id)
+          ? exclude_id
+          : [exclude_id]
+        : [];
+
+      console.log(excludeIds, 'excludeIds');
+
       const whereClause: any = {
         church_id: church?.id,
         ...(gender && { gender: String(gender) }),
-        ...(exclude_id && { id: { [Op.not]: exclude_id } }),
+        ...(excludeIds.length > 0 && { id: { [Op.notIn]: excludeIds } }),
         ...(q && { name: { [Op.iLike]: `%${q}%` } }),
         ...(id && { id }),
         ...(family_id && { family_id }),
@@ -107,7 +116,6 @@ export const CongregationController = {
           id: ['Terjadi kesalahan pada server'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },

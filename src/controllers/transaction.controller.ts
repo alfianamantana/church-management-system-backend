@@ -1,59 +1,48 @@
 import { Request, Response } from 'express';
 import { Transaction, Category, Church } from '../model';
-import Validator from 'validatorjs';
 import { Op } from 'sequelize';
+import { getValidationRules, validateField } from '../helpers';
 
 export const TransactionController = {
   // Get all transactions with pagination and search
-  async getTransactions(req: Request, res: Response) {
+  async get(req: Request, res: Response) {
     try {
-      let { page = 1, limit = 10, q } = req.query;
-      page = Number(page) || 1;
-      limit = Number(limit) || 10;
-      const offset = (page - 1) * limit;
+      const { church } = req;
+      const { page = 1, limit = 10, q, id } = req.query;
 
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const whereClause: any = { church_id: church?.id };
+
+      if (id) {
+        whereClause.id = id;
       }
 
-      let whereClause: any = {
-        church_id: church.id,
-      };
       if (q) {
-        whereClause = {
-          ...whereClause,
-          [Op.or]: [
-            { '$category.name$': { [Op.iLike]: `%${q}%` } },
-            { note: { [Op.iLike]: `%${q}%` } },
-          ],
-        };
+        whereClause[Op.or] = [
+          { '$category.name$': { [Op.iLike]: `%${q}%` } },
+          { note: { [Op.iLike]: `%${q}%` } },
+        ];
       }
 
       const { count, rows } = await Transaction.findAndCountAll({
-        offset,
-        limit,
         where: whereClause,
         include: [{ model: Category, as: 'category' }],
         order: [
           ['date', 'DESC'],
           ['id', 'DESC'],
         ],
+        offset,
+        limit: limitNum,
       });
 
       return res.json({
         code: 200,
         status: 'success',
         data: rows,
-        pagination: { total: count, page },
+        pagination: { total: count, page: pageNum },
       });
     } catch (err) {
       return res.json({
@@ -63,46 +52,43 @@ export const TransactionController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
-        error: err,
       });
     }
   },
 
   // Create a new transaction
-  async createTransaction(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { date, category_id, amount, note } = req.body;
 
-      const rules = {
-        date: 'required|date',
-        category_id: 'required|numeric',
-        amount: 'required|numeric|min:0',
-        note: 'string',
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate each field
+      const fields = {
+        date: { value: date, rules: validationRules.date },
+        category_id: { value: category_id, rules: validationRules.category_id },
+        amount: { value: amount, rules: validationRules.amount },
+        note: { value: note, rules: validationRules.note },
       };
 
-      const validation = new Validator(
-        { date, category_id, amount, note },
-        rules,
-      );
-      if (validation.fails())
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
-          },
-        });
-
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
@@ -124,7 +110,7 @@ export const TransactionController = {
       }
 
       await Transaction.create({
-        church_id: church.id,
+        church_id: church?.id,
         date,
         category_id,
         amount,
@@ -152,38 +138,56 @@ export const TransactionController = {
   },
 
   // Update a transaction
-  async updateTransaction(req: Request, res: Response) {
+  async update(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
       const { date, category_id, amount, note } = req.body;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate id
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      // Validate optional fields
+      const fields: { [key: string]: { value: any; rules: any } } = {};
+      if (date !== undefined)
+        fields.date = { value: date, rules: validationRules.date };
+      if (category_id !== undefined)
+        fields.category_id = {
+          value: category_id,
+          rules: validationRules.category_id,
+        };
+      if (amount !== undefined)
+        fields.amount = { value: amount, rules: validationRules.amount };
+      if (note !== undefined)
+        fields.note = { value: note, rules: validationRules.note };
+
+      Object.entries(fields).forEach(([fieldName, config]) => {
+        const errors = validateField(config.value, config.rules);
+        if (errors.id) errorsId.push(errors.id);
+        if (errors.en) errorsEn.push(errors.en);
+      });
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            en: ['Validation failed'],
-            id: ['Validasi gagal'],
-          },
-        });
-
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
 
       const transaction = await Transaction.findOne({
-        where: { id: Number(id), church_id: church.id },
+        where: { id, church_id: church?.id },
       });
       if (!transaction) {
         return res.json({
@@ -222,7 +226,6 @@ export const TransactionController = {
           id: ['Transaksi berhasil diperbarui'],
           en: ['Transaction updated successfully'],
         },
-        data: transaction,
       });
     } catch (err) {
       return res.json({
@@ -238,37 +241,35 @@ export const TransactionController = {
   },
 
   // Delete a transaction
-  async deleteTransaction(req: Request, res: Response) {
+  async destroy(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { id } = req.query;
 
-      const rules = { id: 'required|numeric' };
-      const validation = new Validator({ id }, rules);
-      if (validation.fails())
+      // Simplified validation
+      const validationRules = getValidationRules();
+      const errorsId: string[] = [];
+      const errorsEn: string[] = [];
+
+      // Validate id
+      const idErrors = validateField(id, validationRules.id);
+      if (idErrors.id) errorsId.push(idErrors.id);
+      if (idErrors.en) errorsEn.push(idErrors.en);
+
+      // If there are validation errors, return them
+      if (errorsId.length > 0 || errorsEn.length > 0) {
         return res.json({
           code: 400,
           status: 'error',
           message: {
-            id: ['Validasi gagal'],
-            en: ['Validation failed'],
-          },
-        });
-
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
+            id: errorsId,
+            en: errorsEn,
           },
         });
       }
 
       const transaction = await Transaction.findOne({
-        where: { id: Number(id), church_id: church.id },
+        where: { id, church_id: church?.id },
       });
       if (!transaction) {
         return res.json({

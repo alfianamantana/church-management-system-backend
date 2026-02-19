@@ -11,8 +11,6 @@ declare global {
 
 const auth_church = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('kesin');
-
     const user = req.user;
     const churchId = req.headers.church as string;
 
