@@ -15,61 +15,15 @@ const auth_superadmin = async (
   next: NextFunction,
 ) => {
   try {
-    const token = req.headers.token as string;
-    const authorization = req.headers.authorization as string;
-    if (!token) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: 'Unauthorized: No token provided',
-      });
-    }
-    const authRecord = await Auth.findOne({ where: { token } });
-    if (!authRecord) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: 'Unauthorized: Invalid token',
-      });
-    }
+    const { user } = req as Express.Request;
 
-    if (new Date() > authRecord.valid_until) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: 'Unauthorized: Token has expired',
-      });
-    }
-    const user = await User.findOne({
-      where: { id: authRecord.user_id },
-      include: [{ model: UserRole, as: 'userRole' }],
-    });
-    if (!user) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: 'Unauthorized: User not found',
-      });
-    }
-
-    if (user.unique_key !== authorization) {
-      return res.json({
-        code: 401,
-        status: 'error',
-        message: 'Unauthorized: Invalid authorization key',
-      });
-    }
-
-    if (user.userRole?.name !== 'superadmin') {
+    if (user?.userRole?.name !== 'superadmin') {
       return res.json({
         code: 403,
         status: 'error',
         message: 'Forbidden role',
       });
     }
-
-    // Set subscribe_type property for backward compatibility
-    // Removed as subscribeType moved to Church model
 
     req.user = user;
 

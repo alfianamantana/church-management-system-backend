@@ -22,7 +22,6 @@ import {
   ChurchSubscription,
   Payment,
   Invoice,
-  PlanTier,
   Coupon,
 } from '../src/model';
 
@@ -78,7 +77,6 @@ const sequelize = new Sequelize({
     ChurchSubscription,
     Payment,
     Invoice,
-    PlanTier,
     Coupon,
   ],
 });

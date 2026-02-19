@@ -144,60 +144,6 @@ export class SubscribeType extends Model {
 }
 
 @Table({
-  tableName: 'plan_tiers',
-  timestamps: true,
-  underscored: true,
-  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
-})
-export class PlanTier extends Model {
-  @Column({
-    type: DataType.UUID,
-    primaryKey: true,
-    unique: true,
-    allowNull: false,
-    defaultValue: DataType.UUIDV4,
-  })
-  id!: string;
-
-  @Column({
-    type: DataType.STRING(255),
-    allowNull: false,
-    field: 'name',
-  })
-  name!: string;
-
-  @Column({
-    type: DataType.DECIMAL(15, 2),
-    allowNull: false,
-    field: 'price_per_year',
-  })
-  price_per_year!: number;
-
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    field: 'duration_month',
-  })
-  duration_month!: number;
-
-  @CreatedAt
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-    field: 'created_at',
-  })
-  created_at!: Date;
-
-  @UpdatedAt
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-    field: 'updated_at',
-  })
-  updated_at!: Date;
-}
-
-@Table({
   tableName: 'coupons',
   timestamps: true,
   underscored: true,
@@ -238,10 +184,11 @@ export class Coupon extends Model {
   type!: 'discount_percentage' | 'discount_fixed' | 'add_duration';
 
   @Column({
-    type: DataType.DECIMAL(15, 2),
+    type: DataType.INTEGER,
     allowNull: true,
+    field: 'remaining_quantity',
   })
-  value?: number;
+  remaining_quantity?: number;
 
   @Column({
     type: DataType.BOOLEAN,
@@ -258,8 +205,8 @@ export class Coupon extends Model {
   })
   expired_at?: Date;
 
-  @HasMany(() => ChurchSubscription)
-  churchSubscriptions?: ChurchSubscription[];
+  @HasMany(() => Invoice)
+  invoices?: Invoice[];
 
   @CreatedAt
   @Column({
@@ -611,7 +558,6 @@ export class Church extends Model {
   indexes: [
     { fields: ['church_id'] },
     { fields: ['subscribe_type_id'] },
-    { fields: ['coupon_id'] },
     { fields: ['status'] },
     { fields: ['started_at'] },
     { fields: ['ended_at'] },
@@ -651,17 +597,6 @@ export class ChurchSubscription extends Model {
   @BelongsTo(() => SubscribeType)
   subscribeType!: SubscribeType;
 
-  @ForeignKey(() => Coupon)
-  @Column({
-    type: DataType.UUID,
-    allowNull: true,
-    field: 'coupon_id',
-  })
-  coupon_id?: string;
-
-  @BelongsTo(() => Coupon)
-  coupon?: Coupon;
-
   @HasMany(() => Invoice)
   invoices?: Invoice[];
 
@@ -674,14 +609,6 @@ export class ChurchSubscription extends Model {
     defaultValue: 'trial',
   })
   status!: 'trial' | 'active' | 'past_due' | 'expired' | 'canceled';
-
-  @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-    field: 'is_founder',
-  })
-  is_founder!: boolean;
 
   @Column({
     type: DataType.DECIMAL(15, 2),
@@ -742,6 +669,7 @@ export class ChurchSubscription extends Model {
   indexes: [
     { fields: ['church_id'] },
     { fields: ['subscription_id'] },
+    { fields: ['coupon_id'] },
     { fields: ['status'] },
     { fields: ['due_date'] },
     { fields: ['paid_at'] },
@@ -780,6 +708,17 @@ export class Invoice extends Model {
 
   @BelongsTo(() => ChurchSubscription)
   subscription!: ChurchSubscription;
+
+  @ForeignKey(() => Coupon)
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+    field: 'coupon_id',
+  })
+  coupon_id?: string;
+
+  @BelongsTo(() => Coupon)
+  coupon?: Coupon;
 
   @HasMany(() => Payment)
   payments?: Payment[];
@@ -980,7 +919,7 @@ export class Family extends Model {
   name!: string;
 
   @HasMany(() => Congregation)
-  congregations?: Congregation[];
+  congregations?: any[];
 
   @CreatedAt
   @Column({
@@ -1133,8 +1072,8 @@ export class Congregation extends Model {
   })
   family_id?: string;
 
-  @BelongsTo(() => Family)
-  family?: Family;
+  @BelongsTo(() => Family, { foreignKey: 'family_id', as: 'family' })
+  family?: any;
 
   @CreatedAt
   @Column({

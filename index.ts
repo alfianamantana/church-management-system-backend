@@ -28,6 +28,7 @@ import { DashboardRoutes } from './src/routes/dashboard.route';
 import { AssetRoutes } from './src/routes/asset.route';
 import { ChurchRoutes } from './src/routes/church.route';
 import { PriorityNeedRoutes } from './src/routes/priority_need.route';
+import { CouponRoutes } from './src/routes/coupon.route';
 import UserRoleRoutes from './src/routes/user_role.route';
 import auth_public from './src/middlewares/auth_public';
 const app: Express = express();
@@ -90,6 +91,10 @@ app.use('/churches', churchRouter);
 const priorityNeedRouter = express.Router();
 PriorityNeedRoutes(priorityNeedRouter);
 app.use('/priority-needs', priorityNeedRouter);
+
+const couponRouter = express.Router();
+CouponRoutes(couponRouter);
+app.use('/coupons', couponRouter);
 
 app.use('/user-roles', UserRoleRoutes);
 

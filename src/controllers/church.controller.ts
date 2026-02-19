@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
-import { Church, User, UserChurch, SubscribeType } from '../model';
+import {
+  Church,
+  User,
+  UserChurch,
+  SubscribeType,
+  ChurchSubscription,
+  Coupon,
+} from '../model';
 import { validateField, getValidationRules } from '../helpers';
+import { subscribe } from 'node:diagnostics_channel';
+import { Op } from 'sequelize';
 
 export const ChurchController = {
   async get(req: Request, res: Response) {
@@ -112,6 +121,25 @@ export const ChurchController = {
         { transaction },
       );
 
+      let subscribeType = await SubscribeType.findOne({
+        where: { name: 'trial' },
+        transaction,
+      });
+
+      await ChurchSubscription.create(
+        {
+          church_id: createdChurch.id,
+          subscribe_type_id: subscribeType?.id,
+          status: 'trial',
+          jemaat_limit: 5,
+          admin_limit: 0,
+          price_per_year: 1,
+          started_at: new Date(),
+          ended_at: new Date(new Date().setDate(new Date().getDate() + 7)), // 7 days trial period
+        },
+        { transaction },
+      );
+
       const newuser = await User.findOne({
         where: { id: dbUser.id },
         include: [Church],
@@ -130,7 +158,7 @@ export const ChurchController = {
         data: newuser,
       });
     } catch (err) {
-      console.log(err, '?AsdasD?');
+      console.log(err, 'asd?Asd');
 
       await transaction.rollback();
       return res.json({

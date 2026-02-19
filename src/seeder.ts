@@ -89,13 +89,22 @@ async function seedPriorityNeeds() {
 async function seedSubscribeTypes() {
   const subscribeTypes = [
     {
+      name: 'trial',
+      description: 'Paket trial gratis untuk gereja baru',
+      jemaat_limit: 5,
+      admin_limit: 0,
+      is_public: false,
+      is_active: true,
+      base_price_per_year: 0.0,
+    },
+    {
       name: 'bibit',
       description: 'Paket dasar untuk gereja kecil',
       jemaat_limit: 100,
       admin_limit: 5,
       is_public: true,
       is_active: true,
-      base_price_per_year: 0.0,
+      base_price_per_year: 80000.0,
     },
     {
       name: 'bertumbuh',

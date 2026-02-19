@@ -5,6 +5,7 @@ import {
   PriorityNeed,
   UserPriorityNeed,
   Church,
+  ChurchSubscription,
   UserOtp,
   UserRole,
   SubscribeType,
@@ -27,11 +28,30 @@ export const UserController = {
     try {
       const user = req.user;
       const church = req.query.church === 'true';
+      const role = req.query.role === 'true';
+      const church_subscription = req.query.church_subscription === 'true';
 
       let includeCondition: any = [];
 
       if (church) {
-        includeCondition.push({ model: Church });
+        const churchInclude: any = {
+          model: Church,
+          as: 'churches',
+          through: { attributes: [] },
+        };
+        if (church_subscription) {
+          churchInclude.include = [
+            { model: ChurchSubscription, as: 'subscriptions' },
+          ];
+        }
+        includeCondition.push(churchInclude);
+      }
+
+      if (role) {
+        includeCondition.push({
+          model: UserRole,
+          as: 'userRole',
+        });
       }
 
       const userInstance = await User.findOne({
@@ -49,6 +69,8 @@ export const UserController = {
         },
       });
     } catch (err) {
+      console.log(err, 'asa?S');
+
       return res.json({
         code: 500,
         status: 'error',
@@ -56,6 +78,7 @@ export const UserController = {
           id: ['Kesalahan server internal'],
           en: ['Internal server error'],
         },
+        error: err,
       });
     }
   },
