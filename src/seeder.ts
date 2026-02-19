@@ -26,21 +26,12 @@ async function seedSuperadmin() {
     superadminRole = await UserRole.create({ name: 'superadmin' });
   }
 
-  // Create full subscription type if it doesn't exist
-  let fullSubscribeType = await SubscribeType.findOne({
-    where: { name: 'full' },
-  });
-  if (!fullSubscribeType) {
-    fullSubscribeType = await SubscribeType.create({ name: 'full' });
-  }
-
   await User.create({
     name,
     email,
     password: hashedPassword,
     phone_number,
     role_id: superadminRole.id,
-    subscribe_type_id: fullSubscribeType.id,
     unique_key: 'alfianganteng',
   });
   console.log('Superadmin seeded!');
@@ -97,9 +88,33 @@ async function seedPriorityNeeds() {
 
 async function seedSubscribeTypes() {
   const subscribeTypes = [
-    { name: 'bibit' },
-    { name: 'bertumbuh' },
-    { name: 'full' },
+    {
+      name: 'bibit',
+      description: 'Paket dasar untuk gereja kecil',
+      jemaat_limit: 100,
+      admin_limit: 5,
+      is_public: true,
+      is_active: true,
+      base_price_per_year: 0.0,
+    },
+    {
+      name: 'bertumbuh',
+      description: 'Paket untuk gereja yang sedang berkembang',
+      jemaat_limit: 500,
+      admin_limit: 15,
+      is_public: true,
+      is_active: true,
+      base_price_per_year: 1200000.0,
+    },
+    {
+      name: 'full',
+      description: 'Paket lengkap untuk gereja besar',
+      jemaat_limit: 999999,
+      admin_limit: 999999,
+      is_public: false,
+      is_active: true,
+      base_price_per_year: 2400000.0,
+    },
   ];
 
   for (const type of subscribeTypes) {

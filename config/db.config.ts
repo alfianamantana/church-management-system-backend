@@ -19,6 +19,11 @@ import {
   UserOtp,
   UserChurch,
   SubscribeType,
+  ChurchSubscription,
+  Payment,
+  Invoice,
+  PlanTier,
+  Coupon,
 } from '../src/model';
 
 console.log('DB_NAME:', process.env.DB_NAME);
@@ -70,6 +75,11 @@ const sequelize = new Sequelize({
     UserOtp,
     UserChurch,
     SubscribeType,
+    ChurchSubscription,
+    Payment,
+    Invoice,
+    PlanTier,
+    Coupon,
   ],
 });
 

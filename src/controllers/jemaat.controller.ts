@@ -281,11 +281,7 @@ export const CongregationController = {
         { transaction },
       );
 
-      // Increment total_jemaat_created for the user
-      await User.increment('total_jemaat_created', {
-        where: { id: user?.id },
-        transaction,
-      });
+      // Removed: Increment total_jemaat_created for the user (field no longer exists)
 
       await transaction.commit();
 
@@ -367,10 +363,7 @@ export const CongregationController = {
       transaction = await sequelize.transaction();
       await jemaat.destroy({ transaction });
 
-      await User.decrement('total_jemaat_created', {
-        where: { id: user?.id },
-        transaction,
-      });
+      // Removed: Decrement total_jemaat_created for the user (field no longer exists)
       transaction.commit();
 
       return res.json({

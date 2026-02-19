@@ -65,7 +65,7 @@ export const UserController = {
     try {
       const { user, church } = req;
       transaction = await sequelize.transaction();
-      const { name, email, phone_number, role, subscribe_type } = req.body;
+      const { name, email, phone_number, role } = req.body;
 
       // Simplified validation
       const validationRules = getValidationRules();
@@ -132,22 +132,6 @@ export const UserController = {
         });
       }
 
-      // Get subscribe type
-      let subscribeType = await SubscribeType.findOne({
-        where: { name: subscribe_type },
-        transaction,
-      });
-      if (!subscribeType) {
-        return res.json({
-          code: 400,
-          status: 'error',
-          message: {
-            id: ['Tipe langganan tidak ditemukan'],
-            en: ['Subscribe type not found'],
-          },
-        });
-      }
-
       // Generate default password
       const defaultPassword = 'password123';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
@@ -159,9 +143,7 @@ export const UserController = {
           password: hashedPassword,
           phone_number,
           role_id: userRole.id,
-          subscribe_type_id: subscribeType.id,
           superuser_id: req.user?.id,
-          total_jemaat_created: 0,
           status: 'active',
           registration_source: 'admin',
           must_change_password: true,
@@ -552,8 +534,27 @@ export const UserController = {
           },
         });
 
-      // Check if subscription has expired
-      // Removed as subscription moved to Church model
+      if (userInstance.status === 'disabled') {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Akun Anda telah dinonaktifkan'],
+            en: ['Your account has been disabled'],
+          },
+        });
+      }
+
+      if (userInstance.status === 'suspended') {
+        return res.json({
+          code: 400,
+          status: 'error',
+          message: {
+            id: ['Akun Anda telah ditangguhkan'],
+            en: ['Your account has been suspended'],
+          },
+        });
+      }
 
       const match = await bcrypt.compare(password, userInstance.password);
 
@@ -707,18 +708,6 @@ export const UserController = {
       if (!userRole) {
         userRole = await UserRole.create(
           { name: 'superadmin' },
-          { transaction },
-        );
-      }
-
-      // Create subscribe type if it doesn't exist
-      let bibitSubscribeType = await SubscribeType.findOne({
-        where: { name: 'bibit' },
-        transaction,
-      });
-      if (!bibitSubscribeType) {
-        bibitSubscribeType = await SubscribeType.create(
-          { name: 'bibit' },
           { transaction },
         );
       }

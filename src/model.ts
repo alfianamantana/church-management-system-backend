@@ -55,7 +55,12 @@ export class UserRole extends Model {
   tableName: 'subscribe_types',
   timestamps: true,
   underscored: true,
-  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
+  indexes: [
+    { fields: ['is_public'] },
+    { fields: ['is_active'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
 })
 export class SubscribeType extends Model {
   @Column({
@@ -74,8 +79,187 @@ export class SubscribeType extends Model {
   })
   name!: string;
 
-  @HasMany(() => Church)
-  churches?: Church[];
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    field: 'description',
+  })
+  description?: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'jemaat_limit',
+  })
+  jemaat_limit!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'admin_limit',
+  })
+  admin_limit!: number;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_public',
+  })
+  is_public!: boolean;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_active',
+  })
+  is_active!: boolean;
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+    field: 'base_price_per_year',
+  })
+  base_price_per_year!: number;
+
+  @HasMany(() => ChurchSubscription)
+  churchSubscriptions?: ChurchSubscription[];
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+}
+
+@Table({
+  tableName: 'plan_tiers',
+  timestamps: true,
+  underscored: true,
+  indexes: [{ fields: ['created_at'] }, { fields: ['updated_at'] }],
+})
+export class PlanTier extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'name',
+  })
+  name!: string;
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+    field: 'price_per_year',
+  })
+  price_per_year!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'duration_month',
+  })
+  duration_month!: number;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+}
+
+@Table({
+  tableName: 'coupons',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['code'], unique: true },
+    { fields: ['is_active'] },
+    { fields: ['expired_at'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
+})
+export class Coupon extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    unique: true,
+    field: 'code',
+  })
+  code!: string;
+
+  @Column({
+    type: DataType.ENUM(
+      'discount_percentage',
+      'discount_fixed',
+      'add_duration',
+    ),
+    allowNull: false,
+  })
+  type!: 'discount_percentage' | 'discount_fixed' | 'add_duration';
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: true,
+  })
+  value?: number;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_active',
+  })
+  is_active!: boolean;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'expired_at',
+  })
+  expired_at?: Date;
+
+  @HasMany(() => ChurchSubscription)
+  churchSubscriptions?: ChurchSubscription[];
 
   @CreatedAt
   @Column({
@@ -394,34 +578,351 @@ export class Church extends Model {
   @BelongsToMany(() => User, { through: () => UserChurch })
   users?: User[];
 
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-    field: 'total_jemaat_created',
-  })
-  total_jemaat_created!: number;
+  @HasMany(() => ChurchSubscription)
+  subscriptions?: ChurchSubscription[];
 
+  @HasMany(() => Invoice)
+  invoices?: Invoice[];
+
+  @HasMany(() => Payment)
+  payments?: Payment[];
+
+  @CreatedAt
   @Column({
     type: DataType.DATE,
-    allowNull: true,
-    field: 'subscribe_until',
+    allowNull: false,
+    field: 'created_at',
   })
-  subscribe_until?: Date;
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+}
+
+@Table({
+  tableName: 'church_subscriptions',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['subscribe_type_id'] },
+    { fields: ['coupon_id'] },
+    { fields: ['status'] },
+    { fields: ['started_at'] },
+    { fields: ['ended_at'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
+})
+export class ChurchSubscription extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
 
   @ForeignKey(() => SubscribeType)
   @Column({
     type: DataType.UUID,
-    allowNull: true,
+    allowNull: false,
     field: 'subscribe_type_id',
   })
-  subscribe_type_id?: string;
+  subscribe_type_id!: string;
 
-  @BelongsTo(() => SubscribeType, {
-    foreignKey: 'subscribe_type_id',
-    as: 'subscribeType',
+  @BelongsTo(() => SubscribeType)
+  subscribeType!: SubscribeType;
+
+  @ForeignKey(() => Coupon)
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+    field: 'coupon_id',
   })
-  subscribeType?: SubscribeType;
+  coupon_id?: string;
+
+  @BelongsTo(() => Coupon)
+  coupon?: Coupon;
+
+  @HasMany(() => Invoice)
+  invoices?: Invoice[];
+
+  @HasMany(() => Payment)
+  payments?: Payment[];
+
+  @Column({
+    type: DataType.ENUM('trial', 'active', 'past_due', 'expired', 'canceled'),
+    allowNull: false,
+    defaultValue: 'trial',
+  })
+  status!: 'trial' | 'active' | 'past_due' | 'expired' | 'canceled';
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'is_founder',
+  })
+  is_founder!: boolean;
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+    field: 'price_per_year',
+  })
+  price_per_year!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'jemaat_limit',
+  })
+  jemaat_limit!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    field: 'admin_limit',
+  })
+  admin_limit!: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'started_at',
+  })
+  started_at!: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'ended_at',
+  })
+  ended_at?: Date;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+}
+
+@Table({
+  tableName: 'invoices',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['subscription_id'] },
+    { fields: ['status'] },
+    { fields: ['due_date'] },
+    { fields: ['paid_at'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
+})
+export class Invoice extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
+
+  @ForeignKey(() => ChurchSubscription)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'subscription_id',
+  })
+  subscription_id!: string;
+
+  @BelongsTo(() => ChurchSubscription)
+  subscription!: ChurchSubscription;
+
+  @HasMany(() => Payment)
+  payments?: Payment[];
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+  })
+  amount!: number;
+
+  @Column({
+    type: DataType.ENUM('pending', 'paid', 'canceled'),
+    allowNull: false,
+    defaultValue: 'pending',
+  })
+  status!: 'pending' | 'paid' | 'canceled';
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'due_date',
+  })
+  due_date!: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: 'paid_at',
+  })
+  paid_at?: Date;
+
+  @CreatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'created_at',
+  })
+  created_at!: Date;
+
+  @UpdatedAt
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'updated_at',
+  })
+  updated_at!: Date;
+}
+
+@Table({
+  tableName: 'payments',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['church_id'] },
+    { fields: ['subscription_id'] },
+    { fields: ['invoice_id'] },
+    { fields: ['status'] },
+    { fields: ['payment_date'] },
+    { fields: ['created_at'] },
+    { fields: ['updated_at'] },
+  ],
+})
+export class Payment extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'church_id',
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
+
+  @ForeignKey(() => ChurchSubscription)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+    field: 'subscription_id',
+  })
+  subscription_id!: string;
+
+  @BelongsTo(() => ChurchSubscription)
+  subscription!: ChurchSubscription;
+
+  @ForeignKey(() => Invoice)
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+    field: 'invoice_id',
+  })
+  invoice_id?: string;
+
+  @BelongsTo(() => Invoice)
+  invoice?: Invoice;
+
+  @Column({
+    type: DataType.DECIMAL(15, 2),
+    allowNull: false,
+  })
+  amount!: number;
+
+  @Column({
+    type: DataType.ENUM('transfer', 'credit_card', 'ewallet', 'manual'),
+    allowNull: false,
+  })
+  payment_method!: 'transfer' | 'credit_card' | 'ewallet' | 'manual';
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    field: 'payment_date',
+  })
+  payment_date!: Date;
+
+  @Column({
+    type: DataType.ENUM('pending', 'completed', 'failed', 'refunded'),
+    allowNull: false,
+    defaultValue: 'pending',
+  })
+  status!: 'pending' | 'completed' | 'failed' | 'refunded';
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: false,
+    field: 'transaction_reference',
+  })
+  transaction_reference!: string;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  notes?: string;
 
   @CreatedAt
   @Column({
@@ -792,7 +1293,7 @@ export class Event extends Model {
 }
 
 @Table({
-  tableName: 'members',
+  tableName: 'service_member',
   timestamps: true,
   underscored: true,
   indexes: [

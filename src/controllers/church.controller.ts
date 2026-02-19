@@ -59,24 +59,6 @@ export const ChurchController = {
         });
       }
 
-      // Fetch default subscribe type for new church
-      const defaultSubscribeType = await SubscribeType.findOne({
-        where: { name: 'bibit' },
-        transaction,
-      });
-
-      if (!defaultSubscribeType) {
-        await transaction.rollback();
-        return res.json({
-          code: 500,
-          status: 'error',
-          message: {
-            id: ['Tipe langganan default tidak ditemukan'],
-            en: ['Default subscription type not found'],
-          },
-        });
-      }
-
       const { name, email, city, phone_number } = req.body;
 
       // Simplified validation
@@ -117,7 +99,6 @@ export const ChurchController = {
       const createdChurch = await Church.create(
         {
           ...req.body,
-          subscribe_type_id: defaultSubscribeType.id,
         },
         { transaction },
       );
