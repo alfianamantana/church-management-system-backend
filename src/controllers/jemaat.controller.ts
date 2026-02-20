@@ -539,6 +539,10 @@ export const CongregationController = {
       return res.json({
         code: 200,
         status: 'success',
+        message: {
+          id: ['Data ulang tahun berhasil diambil'],
+          en: ['Birthday data retrieved successfully'],
+        },
         data: jemaats,
       });
     } catch (err) {

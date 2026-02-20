@@ -578,11 +578,11 @@ export const getValidationRules = () => ({
   event_id: {
     id: [
       { validator: validateRequired, args: ['id acara'] },
-      { validator: validateNumeric, args: ['id acara'] },
+      { validator: validateString, args: ['id acara'] },
     ],
     en: [
       { validator: validateRequiredEn, args: ['event id'] },
-      { validator: validateNumericEn, args: ['event id'] },
+      { validator: validateStringEn, args: ['event id'] },
     ],
   },
   category_name: {

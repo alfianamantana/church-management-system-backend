@@ -93,4 +93,91 @@ export const AutomationController = {
       });
     }
   },
+
+  async createOrUpdateBirthdayGreeting(req: Request, res: Response) {
+    try {
+      const { church } = req;
+      const { message, send_time_local, timezone } = req.body;
+
+      let automation = await Automation.findOne({
+        where: { church_id: church?.id, type: 'birthday_greeting' },
+        order: [['created_at', 'DESC']],
+      });
+
+      if (!automation) {
+        automation = await Automation.create({
+          church_id: church?.id!,
+          type: 'birthday_greeting',
+          config: { message },
+          send_time_local,
+          timezone,
+          is_active: true,
+          next_run_at: calculateNextRun(send_time_local, timezone),
+        });
+      } else {
+        automation.config = { message };
+        automation.send_time_local = send_time_local;
+        automation.timezone = timezone;
+        automation.next_run_at = calculateNextRun(send_time_local, timezone);
+        await automation.save();
+      }
+
+      res.json({
+        code: 200,
+        status: 'success',
+        message: {
+          id: ['Automasi ucapan ulang tahun berhasil disimpan'],
+          en: ['Birthday greeting automation saved successfully'],
+        },
+      });
+    } catch (error) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Terjadi kesalahan pada server internal'],
+          en: ['Internal server error'],
+        },
+      });
+    }
+  },
+
+  async getBirthDayGreeting(req: Request, res: Response) {
+    try {
+      const { church } = req;
+      const automations = await Automation.findOne({
+        where: { church_id: church?.id, type: 'birthday_greeting' },
+        order: [['created_at', 'DESC']],
+      });
+      if (!automations) {
+        return res.json({
+          code: 200,
+          status: 'success',
+          message: {
+            id: ['Automasi ucapan ulang tahun tidak ditemukan'],
+            en: ['Birthday greeting automation not found'],
+          },
+          data: [],
+        });
+      }
+      res.json({
+        code: 200,
+        status: 'success',
+        message: {
+          id: ['Automasi berhasil diambil'],
+          en: ['Automations retrieved successfully'],
+        },
+        data: [automations],
+      });
+    } catch (error) {
+      return res.json({
+        code: 500,
+        status: 'error',
+        message: {
+          id: ['Terjadi kesalahan pada server internal'],
+          en: ['Internal server error'],
+        },
+      });
+    }
+  },
 };
