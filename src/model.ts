@@ -1914,3 +1914,138 @@ export class UserChurch extends Model {
   })
   updated_at!: Date;
 }
+
+@Table({
+  tableName: 'automations',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    {
+      name: 'automation_due_index',
+      fields: ['is_active', 'next_run_at'],
+    },
+    {
+      fields: ['church_id'],
+    },
+    {
+      fields: ['type'],
+    },
+  ],
+})
+export class Automation extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
+
+  @Column({
+    type: DataType.ENUM('birthday_greeting', 'service_assignment_notification'),
+    allowNull: false,
+  })
+  type!: 'birthday_greeting' | 'service_assignment_notification';
+
+  @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: true,
+  })
+  is_active!: boolean;
+
+  // 🔥 recurring rule (LOCAL time)
+  @Column({
+    type: DataType.TIME,
+    allowNull: true,
+  })
+  send_time_local?: string; // "08:00:00"
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  timezone!: string; // "Asia/Jakarta", "America/New_York"
+
+  // 🔥 execution engine pakai ini (UTC)
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  next_run_at?: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  last_run_at?: Date;
+
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+  })
+  config?: any;
+}
+
+@Table({
+  tableName: 'automation_logs',
+  timestamps: true,
+  underscored: true,
+  indexes: [
+    { fields: ['automation_id'] },
+    { fields: ['church_id'] },
+    { fields: ['status'] },
+  ],
+})
+export class AutomationLog extends Model {
+  @Column({
+    type: DataType.UUID,
+    primaryKey: true,
+    defaultValue: DataType.UUIDV4,
+  })
+  id!: string;
+
+  @ForeignKey(() => Automation)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  automation_id!: string;
+
+  @BelongsTo(() => Automation)
+  automation!: Automation;
+
+  @ForeignKey(() => Church)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  church_id!: string;
+
+  @BelongsTo(() => Church)
+  church!: Church;
+
+  @Column({
+    type: DataType.STRING,
+  })
+  recipient_phone!: string;
+
+  @Column({
+    type: DataType.ENUM('pending', 'sent', 'failed'),
+    defaultValue: 'pending',
+  })
+  status!: string;
+
+  @Column({
+    type: DataType.TEXT,
+  })
+  message!: string;
+}

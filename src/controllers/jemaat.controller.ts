@@ -483,6 +483,7 @@ export const CongregationController = {
   },
   async getBirthdayByMonth(req: Request, res: Response) {
     try {
+      const { church } = req;
       const { date } = req.query;
       if (!date) {
         return res.json({
@@ -509,19 +510,6 @@ export const CongregationController = {
 
       const month = parsedDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
 
-      // Get church for the user
-      const church = await Church.findOne({ where: { user_id: req.user?.id } });
-      if (!church) {
-        return res.json({
-          code: 404,
-          status: 'error',
-          message: {
-            id: ['Gereja tidak ditemukan'],
-            en: ['Church not found'],
-          },
-        });
-      }
-
       const jemaats = await Congregation.findAll({
         where: {
           [Op.and]: [
@@ -532,7 +520,7 @@ export const CongregationController = {
               ),
               month,
             ),
-            { church_id: church.id },
+            { church_id: church?.id },
           ],
         },
         attributes: [

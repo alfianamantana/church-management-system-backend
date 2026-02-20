@@ -29,6 +29,7 @@ import { AssetRoutes } from './src/routes/asset.route';
 import { ChurchRoutes } from './src/routes/church.route';
 import { PriorityNeedRoutes } from './src/routes/priority_need.route';
 import { CouponRoutes } from './src/routes/coupon.route';
+import { AutomationRoutes } from './src/routes/automation.route';
 import UserRoleRoutes from './src/routes/user_role.route';
 import auth_public from './src/middlewares/auth_public';
 const app: Express = express();
@@ -95,6 +96,10 @@ app.use('/priority-needs', priorityNeedRouter);
 const couponRouter = express.Router();
 CouponRoutes(couponRouter);
 app.use('/coupons', couponRouter);
+
+const automationRouter = express.Router();
+AutomationRoutes(automationRouter);
+app.use('/automations', automationRouter);
 
 app.use('/user-roles', UserRoleRoutes);
 

@@ -23,6 +23,8 @@ import {
   Payment,
   Invoice,
   Coupon,
+  Automation,
+  AutomationLog,
 } from '../src/model';
 
 console.log('DB_NAME:', process.env.DB_NAME);
@@ -78,6 +80,8 @@ const sequelize = new Sequelize({
     Payment,
     Invoice,
     Coupon,
+    Automation,
+    AutomationLog,
   ],
 });
 

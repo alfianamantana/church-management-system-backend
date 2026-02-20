@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { DateTime } from 'luxon';
 
 export function generateToken(length = 25) {
   const charset =
@@ -648,3 +649,23 @@ export const getValidationRules = () => ({
     en: [{ validator: validateStringEn, args: ['note'] }],
   },
 });
+
+export const calculateNextRun = (sendTimeLocal: string, timezone: string) => {
+  const [hour, minute, second] = sendTimeLocal.split(':').map(Number);
+
+  const nowUTC = DateTime.utc();
+  const nowLocal = nowUTC.setZone(timezone);
+
+  let nextLocal = nowLocal.set({
+    hour,
+    minute,
+    second: second || 0,
+    millisecond: 0,
+  });
+
+  if (nextLocal <= nowLocal) {
+    nextLocal = nextLocal.plus({ days: 1 });
+  }
+
+  return nextLocal.toUTC().toJSDate();
+};
